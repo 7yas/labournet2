@@ -1,25 +1,38 @@
 const mongoose = require('mongoose');
 
 const workerSchema = new mongoose.Schema({
-  fullName: {
+  email: {
+    type: String,
+    required: true,
+    unique: true,
+    trim: true,
+    lowercase: true
+  },
+  password: {
     type: String,
     required: true
+  },
+  fullName: {
+    type: String,
+    required: true,
+    trim: true
   },
   yearsOfExperience: {
     type: Number,
     required: true
   },
   skills: {
-    type: String,
+    type: [String],
     required: true
   },
   certifications: {
-    type: String,
+    type: [String],
     required: true
   },
   phoneNumber: {
     type: String,
-    required: true
+    required: true,
+    trim: true
   },
   hourlyRate: {
     type: Number,
@@ -27,27 +40,26 @@ const workerSchema = new mongoose.Schema({
   },
   availability: {
     type: String,
-    required: true
+    required: true,
+    trim: true
   },
   description: {
     type: String,
-    required: true
+    required: true,
+    trim: true
   },
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now
+  address: {
+    type: String,
+    required: true,
+    trim: true
   }
 });
 
-// Update the average rating whenever a new review is added
+// Add timestamps
+workerSchema.set('timestamps', true);
+
+// Add pre-save hook to update updatedAt
 workerSchema.pre('save', function(next) {
-  if (this.reviews.length > 0) {
-    this.averageRating = this.reviews.reduce((acc, review) => acc + review.rating, 0) / this.reviews.length;
-  }
   this.updatedAt = new Date();
   next();
 });

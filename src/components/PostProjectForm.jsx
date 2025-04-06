@@ -85,7 +85,7 @@ const PostProjectForm = () => {
     }
 
     // Validate form
-    const requiredFields = ["title", "location", "projectType", "hourlyRate", "jobDescription"];
+    const requiredFields = ["title", "location", "projectType", "hourlyRate", "employmentType"];
     const missingFields = requiredFields.filter((field) => !formData[field]);
 
     if (missingFields.length > 0) {
@@ -110,13 +110,18 @@ const PostProjectForm = () => {
 
       // Prepare project data for API
       const projectData = {
-        ...formData,
+        title: formData.title,
+        location: formData.location,
+        projectType: formData.projectType,
+        employmentType: formData.employmentType,
+        description: formData.jobDescription,
         hourlyRate: { min: minRate, max: maxRate },
         timeline: {
           startDate: new Date(),
           endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
         },
         contractor: user._id,
+        status: "active"
       };
 
       console.log("Sending project data:", projectData);

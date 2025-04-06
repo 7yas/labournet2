@@ -20,9 +20,6 @@ import NotFound from './pages/NotFound';
 import OurStory from "./pages/OurStory";
 import WorkerDashboard from "./pages/WorkerDashboard";
 import WorkerProfile from "./pages/WorkerProfile";
-import WorkerPortfolio from "./pages/WorkerPortfolio";
-import ProfessionalPortfolio from "./pages/ProfessionalPortfolio";
-import ContractorPortfolio from "./pages/ContractorPortfolio";
 import ActiveWork from "./pages/ActiveWork";
 import JobInfo from './pages/JobInfo';
 import ProfessionalDashboard from './pages/ProfessionalDashboard';
@@ -70,9 +67,6 @@ const App = () => (
                   <Route path="/signup" element={<SignUp />} />
                   <Route path="/worker-dashboard" element={<WorkerDashboard />} />
                   <Route path="/worker-profile" element={<WorkerProfile />} />
-                  <Route path="/worker-portfolio" element={<WorkerPortfolio />} />
-                  <Route path="/professional-portfolio" element={<ProfessionalPortfolio />} />
-                  <Route path="/contractor-portfolio" element={<ContractorPortfolio />} />
                   <Route path="/active-work" element={<ActiveWork />} />
                   <Route path="/job-detail/:id" element={<JobInfo />} />
                   <Route path="/job-info/:id" element={<JobInfo />} />

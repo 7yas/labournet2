@@ -30,13 +30,13 @@ const projectSchema = new mongoose.Schema({
   },
   contractor: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
+    ref: 'Contractor',
     required: true
   },
   workers: [{
     worker: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
+      ref: 'Worker'
     },
     status: {
       type: String,
@@ -64,5 +64,17 @@ const projectSchema = new mongoose.Schema({
 }, {
   timestamps: true
 });
+
+// Add virtual population for contractor details
+projectSchema.virtual('contractorDetails', {
+  ref: 'Contractor',
+  localField: 'contractor',
+  foreignField: '_id',
+  justOne: true
+});
+
+// Ensure virtuals are included in toJSON
+projectSchema.set('toJSON', { virtuals: true });
+projectSchema.set('toObject', { virtuals: true });
 
 module.exports = mongoose.model('Project', projectSchema); 

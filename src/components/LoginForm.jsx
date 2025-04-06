@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Input } from "../components/ui/input";
 import { Button } from "../components/ui/button";
 import { Checkbox } from "../components/ui/checkbox";
@@ -18,25 +18,76 @@ const LoginForm = ({
   alternateActionLinkText = "Sign up now",
   socialLogins = ["google", "apple"],
   supportLink = false,
-  redirectPath = "/",
 }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  const role = new URLSearchParams(location.search).get('role');
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log({ email, password, rememberMe });
-    toast.success("Successfully signed in");
-    navigate(redirectPath);
+    
+    if (!role) {
+      toast.error("Role is required");
+      return;
+    }
+
+    try {
+      console.log('Attempting login with:', { email, password, role });
+      const response = await fetch('http://localhost:5000/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          password,
+          role
+        }),
+      });
+
+      const data = await response.json();
+      console.log('Login response:', data);
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Login failed');
+      }
+
+      // Store user data in localStorage
+      localStorage.setItem('userData', JSON.stringify({
+        ...data.user,
+        isAuthenticated: true
+      }));
+
+      toast.success("Successfully signed in");
+      
+      // Navigate to respective dashboard based on role
+      if (role === 'professional') {
+        navigate('/professional-dashboard');
+      } else if (role === 'contractor') {
+        navigate('/contractor-dashboard');
+      } else if (role === 'worker') {
+        navigate('/worker-dashboard');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      toast.error(error.message || "Failed to sign in");
+    }
   };
 
   const handleSocialLogin = (provider) => {
     toast.info(`Redirecting to ${provider} login...`);
     setTimeout(() => {
-      navigate(redirectPath);
+      if (role === 'professional') {
+        navigate('/professional-dashboard');
+      } else if (role === 'contractor') {
+        navigate('/contractor-dashboard');
+      } else if (role === 'worker') {
+        navigate('/worker-dashboard');
+      }
     }, 1500);
   };
 
@@ -102,43 +153,46 @@ const LoginForm = ({
             <Checkbox
               id="remember"
               checked={rememberMe}
-              onCheckedChange={(checked) => setRememberMe(checked)}
+              onCheckedChange={setRememberMe}
             />
             <label
               htmlFor="remember"
-              className="text-sm text-[#717B9E] cursor-pointer"
+              className="text-sm text-[#121224]"
             >
               Remember me
             </label>
           </div>
         )}
 
-        <Button type="submit" className="w-full bg-[#FF4B55] hover:bg-[#E43F49] text-white">
+        <Button
+          type="submit"
+          className="w-full bg-[#FF4B55] hover:bg-[#FF4B55]/90"
+        >
           {actionButtonText}
         </Button>
       </form>
 
-      <div className="mt-4 text-center">
-        <p className="text-[#717B9E] text-sm">
-          {alternateActionText} <Link to={alternateActionLink} className="text-[#FF4B55] hover:underline">{alternateActionLinkText}</Link>
-        </p>
-      </div>
-
-      {socialLogins.length > 0 && (
-        <div className="mt-6">
-          <div className="relative flex items-center justify-center">
-            <div className="border-t border-gray-200 w-full absolute"></div>
-            <span className="bg-white px-2 text-sm text-[#717B9E] relative">Or continue with</span>
+      <div className="mt-6">
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-gray-300" />
           </div>
-          <div className="grid grid-cols-2 gap-3 mt-4">
-            {socialLogins.map((provider) => (
-              <button key={provider} onClick={() => handleSocialLogin(provider)} className="flex items-center justify-center gap-2 border border-gray-300 rounded py-2 px-4 text-sm hover:bg-gray-50 hover:border-[#FF4B55] transition-colors">
-                {provider}
-              </button>
-            ))}
+          <div className="relative flex justify-center text-sm">
+            <span className="bg-white px-2 text-gray-500">
+              {alternateActionText}
+            </span>
           </div>
         </div>
-      )}
+
+        <div className="mt-6">
+          <Link
+            to={`${alternateActionLink}?role=${role}`}
+            className="flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+          >
+            {alternateActionLinkText}
+          </Link>
+        </div>
+      </div>
     </div>
   );
 };

@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "../components/layout/Header";
@@ -65,11 +64,7 @@ const Journey = () => {
   };
 
   const handleLogin = () => {
-    if (selectedRole) {
-      navigate(`/login?role=${selectedRole}`);
-    } else {
-      alert("Please select a role first");
-    }
+    navigate('/login');
   };
 
   return (

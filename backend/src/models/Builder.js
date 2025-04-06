@@ -1,13 +1,31 @@
 const mongoose = require('mongoose');
 
 const builderSchema = new mongoose.Schema({
-  businessName: {
+  email: {
+    type: String,
+    required: true,
+    unique: true,
+    trim: true,
+    lowercase: true
+  },
+  password: {
     type: String,
     required: true
   },
+  fullName: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  businessName: {
+    type: String,
+    required: true,
+    trim: true
+  },
   businessLicense: {
     type: String,
-    required: true
+    required: true,
+    trim: true
   },
   yearsOfExperience: {
     type: Number,
@@ -15,37 +33,28 @@ const builderSchema = new mongoose.Schema({
   },
   licenseNumber: {
     type: String,
-    required: true
+    required: true,
+    trim: true
   },
   insuranceInfo: {
     type: String,
-    required: true
-  },
-  projectTypes: {
-    type: String,
-    required: true
+    required: true,
+    trim: true
   },
   phoneNumber: {
     type: String,
-    required: true
+    required: true,
+    trim: true
   },
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now
+  address: {
+    type: String,
+    required: true,
+    trim: true
   }
+}, {
+  timestamps: true
 });
 
-// Update the average rating whenever a new review is added
-builderSchema.pre('save', function(next) {
-  if (this.reviews.length > 0) {
-    this.averageRating = this.reviews.reduce((acc, review) => acc + review.rating, 0) / this.reviews.length;
-  }
-  this.updatedAt = new Date();
-  next();
-});
+const Builder = mongoose.model('Builder', builderSchema);
 
-module.exports = mongoose.model('Builder', builderSchema); 
+module.exports = Builder; 

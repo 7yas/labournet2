@@ -26,7 +26,7 @@ const ProfessionalMessages = () => {
       [name]: checked
     }));
   };
-
+  
   useEffect(() => {
     const fetchApplicants = async () => {
       try {
@@ -252,35 +252,35 @@ const ProfessionalMessages = () => {
                 {applicants.map((application) => (
                   <div key={application._id} className="bg-white rounded-lg shadow-sm p-6">
                     <div className="flex justify-between items-start mb-4">
-                      <div>
+                          <div>
                         <h3 className="text-lg font-semibold">{application.contractor.businessName}</h3>
                         <p className="text-gray-600">{application.contractor.businessType}</p>
                       </div>
                       <div className="text-right">
                         <p className="text-sm text-gray-500">Applied for</p>
                         <p className="font-medium">{application.projectTitle}</p>
-                      </div>
-                    </div>
-                    
+                            </div>
+                          </div>
+                          
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                       <div>
                         <p className="text-sm text-gray-500">Business License</p>
                         <p className="font-medium">{application.contractor.businessLicense}</p>
-                      </div>
+                        </div>
                       <div>
                         <p className="text-sm text-gray-500">Years of Experience</p>
                         <p className="font-medium">{application.contractor.yearsOfExperience} years</p>
-                      </div>
+                          </div>
                       <div>
                         <p className="text-sm text-gray-500">License Number</p>
                         <p className="font-medium">{application.contractor.licenseNumber}</p>
-                      </div>
+                          </div>
                       <div>
                         <p className="text-sm text-gray-500">Insurance Info</p>
                         <p className="font-medium">{application.contractor.insuranceInfo}</p>
-                      </div>
-                    </div>
-                    
+                          </div>
+                        </div>
+                        
                     <div className="flex justify-end gap-4 mt-4">
                       <Button
                         variant="outline"
@@ -307,7 +307,7 @@ const ProfessionalMessages = () => {
                 <p className="text-gray-500">
                   When contractors apply to your projects, they will appear here.
                 </p>
-              </div>
+            </div>
             )}
           </div>
         </div>
