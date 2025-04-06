@@ -458,7 +458,7 @@ const SignUpForm = ({
                   />
                 </div>
                 <div>
-                  <Label htmlFor="hourlyRate">Hourly Rate ($)</Label>
+                  <Label htmlFor="hourlyRate">Hourly Rate (₹)</Label>
                   <Input
                     id="hourlyRate"
                     name="hourlyRate"

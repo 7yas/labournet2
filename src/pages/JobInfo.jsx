@@ -34,7 +34,7 @@ const JobInfo = () => {
   const { toast } = useToast();
   const [showApplyDialog, setShowApplyDialog] = React.useState(false);
 
-  // Sample job data with Indian context
+  // Sample job data with Indian context - construction industry focused
   const jobs = {
     "1": {
       id: "1",
@@ -78,82 +78,82 @@ const JobInfo = () => {
     },
     "2": {
       id: "2",
-      title: "Data Entry Operator",
-      company: "TechMind Solutions",
+      title: "Masonry Helper",
+      company: "Pinnacle Construction Ltd",
       companyRating: 4.1,
       reviews: 52,
       location: "Bengaluru, KA",
-      address: "42 Koramangala, Bengaluru, Karnataka 560034",
-      jobType: "Part-time",
+      address: "42 Whitefield, Bengaluru, Karnataka 560066",
+      jobType: "Full-time",
       duration: "6 months",
-      hourlyRate: "₹120-140",
+      hourlyRate: "₹160-190",
       experience: "0-1 years",
-      education: "12th Pass",
+      education: "8th Pass",
       postedDate: "8 April, 2025",
       startDate: "22 April, 2025",
       deadline: "19 April, 2025",
-      schedule: "Monday to Friday, 10:00 AM - 4:00 PM",
-      description: "Looking for accurate and fast Data Entry Operators to join our growing team in Bengaluru.",
+      schedule: "Monday to Saturday, 8:00 AM - 5:00 PM",
+      description: "Looking for Masonry Helpers to assist our skilled masons on residential building projects in Bengaluru.",
       responsibilities: [
-        "Enter data into company systems",
-        "Verify data accuracy",
-        "Update records and databases",
-        "Scan and organize documents"
+        "Mix mortar and concrete according to specifications",
+        "Move bricks, blocks, and other materials to masons",
+        "Set up and dismantle scaffolding as needed",
+        "Clean work areas and equipment"
       ],
       requirements: [
-        "Good typing speed (40+ WPM)",
-        "Basic computer knowledge",
-        "Attention to detail",
-        "English communication skills"
+        "Basic knowledge of masonry tools",
+        "Physical stamina and strength",
+        "Ability to follow instructions carefully",
+        "Willingness to learn masonry skills"
       ],
       benefits: [
-        "Flexible work hours",
-        "Monthly incentives for accuracy",
-        "Free snacks and tea",
+        "Daily meal provided",
+        "Weekly payment option",
+        "Safety training provided",
         "Transportation allowance"
       ],
       skills: [
-        "Data Entry", "MS Excel", "Typing", "Record Keeping"
+        "Masonry", "Material Handling", "Physical Strength", "Construction"
       ]
     },
     "3": {
       id: "3",
-      title: "Delivery Associate",
-      company: "Swiggy",
+      title: "Road Construction Laborer",
+      company: "Roadways Infrastructure Corp",
       companyRating: 4.0,
-      reviews: 205,
+      reviews: 115,
       location: "Delhi NCR",
       address: "Various locations across Delhi NCR",
       jobType: "Full-time",
-      duration: "Permanent",
-      hourlyRate: "₹130-200",
+      duration: "4 months",
+      hourlyRate: "₹140-170",
       experience: "No experience required",
-      education: "8th Pass",
+      education: "5th Pass",
       postedDate: "5 April, 2025",
       startDate: "Immediate",
       deadline: "20 April, 2025",
-      schedule: "Flexible shifts, 8-hour rotations",
-      description: "Join India's leading food delivery platform as a Delivery Associate and earn competitive pay with flexible hours.",
+      schedule: "Monday to Saturday, 7:00 AM - 4:00 PM",
+      description: "Join our road construction team for ongoing highway expansion projects across Delhi NCR. Training provided for new workers.",
       responsibilities: [
-        "Pick up and deliver food orders",
-        "Navigate city streets efficiently",
-        "Maintain delivery vehicle in good condition",
-        "Provide excellent customer service"
+        "Prepare construction sites by clearing debris",
+        "Assist in laying asphalt and concrete",
+        "Direct traffic around construction zones",
+        "Load and unload construction materials"
       ],
       requirements: [
-        "Own two-wheeler with valid driving license",
-        "Smartphone with internet connectivity",
-        "Knowledge of city roads",
+        "Physical fitness for outdoor work",
+        "Ability to work in all weather conditions",
+        "Basic understanding of safety procedures",
         "Aadhaar card and PAN card"
       ],
       benefits: [
-        "Daily payouts available",
-        "Accident insurance",
-        "Fuel allowance",
-        "Incentives during peak hours"
+        "Weekly payment option",
+        "Accident insurance coverage",
+        "Safety equipment provided",
+        "Performance bonuses available"
       ],
       skills: [
-        "Driving", "Navigation", "Customer Service", "Time Management"
+        "Road Construction", "Material Handling", "Physical Labour", "Safety Awareness"
       ]
     }
   };
@@ -177,7 +177,7 @@ const JobInfo = () => {
       <header className="bg-[#004a57] text-white p-4 flex justify-between items-center">
         <div className="flex items-center gap-4">
           <Link to="/" className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-[#FF0000] transform rotate-45" />
+            <div className="w-6 h-6 bg-[#5d8aa8] transform rotate-45" />
             <span className="text-[#EEE] text-xl font-medium">LabourNet</span>
           </Link>
           <nav className="hidden md:flex space-x-6 ml-12">
@@ -371,10 +371,7 @@ const JobInfo = () => {
                 
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600">Industry</span>
-                  <span className="font-medium">
-                    {id === "1" ? "Construction" : 
-                     id === "2" ? "IT" : "Food Delivery"}
-                  </span>
+                  <span className="font-medium">Construction</span>
                 </div>
               </div>
               
