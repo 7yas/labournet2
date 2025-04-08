@@ -200,7 +200,7 @@ const ProjectDetailView = () => {
               <div className="space-y-6">
                 <div>
                   <h2 className="text-lg font-semibold mb-3">Job Description</h2>
-                  <p className="text-gray-700 whitespace-pre-line">{job.description}</p>
+                  <p className="text-gray-700 whitespace-pre-line">{job.jobDescription}</p>
                 </div>
                 
                 <div>

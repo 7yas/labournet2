@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import api from '../lib/api';
 
 const AuthContext = createContext();
 
@@ -6,37 +7,43 @@ export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  const login = async (email, password, role, onSuccess) => {
+  useEffect(() => {
+    // Check localStorage for user data on mount
+    const userData = localStorage.getItem('userData');
+    const token = localStorage.getItem('authToken');
+    
+    if (userData && token) {
+      try {
+        const parsedUser = JSON.parse(userData);
+        setUser(parsedUser);
+      } catch (error) {
+        console.error('Error parsing user data:', error);
+        localStorage.removeItem('userData');
+        localStorage.removeItem('authToken');
+      }
+    }
+    setLoading(false);
+  }, []);
+
+  const login = async (email, password, role) => {
     setLoading(true);
     try {
-      // Mock login - in a real app, this would be an API call
-      const mockUser = {
-        _id: '507f1f77bcf86cd799439011', // Valid MongoDB ObjectId format
-        name: 'John Doe',
-        email: email,
-        role: role || 'contractor', // Use the provided role or default to contractor
-        skills: ['Construction', 'Project Management'],
-        location: 'New York, NY',
-        title: role === 'worker' ? 'Construction Worker' : 
-               role === 'professional' ? 'Professional Builder' : 
-               'General Contractor',
-        experience: 10,
-        hourlyRate: 50,
-        about: 'Experienced professional with 10 years in the industry',
-        rating: 4.8,
-        reviews: 42,
-        availability: 'Available Now',
-        profileImage: 'https://example.com/profile.jpg'
-      };
+      const response = await api.post('/auth/login', {
+        email,
+        password,
+        role
+      });
 
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      setUser(mockUser);
-      if (onSuccess) onSuccess();
-      return mockUser;
+      const { user: userData, token } = response.data;
+
+      // Store both user data and token
+      localStorage.setItem('userData', JSON.stringify(userData));
+      localStorage.setItem('authToken', token);
+
+      setUser(userData);
+      return userData;
     } catch (error) {
       console.error('Login error:', error);
       throw error;
@@ -45,9 +52,11 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logout = (onSuccess) => {
+  const logout = () => {
+    localStorage.removeItem('userData');
+    localStorage.removeItem('authToken');
     setUser(null);
-    if (onSuccess) onSuccess();
+    window.location.href = '/login';
   };
 
   const value = {

@@ -6,7 +6,7 @@ import { useLanguage } from "../../contexts/LanguageContext";
 
 const Header = () => {
   const { t } = useLanguage();
-
+  
   const scrollToContact = () => {
     const contactSection = document.getElementById('contact');
     if (contactSection) {

@@ -9,6 +9,7 @@ import { useNavigate } from "react-router-dom";
 import { useLanguage } from "../contexts/LanguageContext";
 import { api } from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
+import { createProject } from "../lib/api";
 
 // Create a context to share project data across components
 export const ProjectContext = React.createContext({
@@ -37,27 +38,20 @@ export const ProjectProvider = ({ children }) => {
   );
 };
 
-const PostProjectForm = () => {
+const PostProjectForm = ({ onClose }) => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { t } = useLanguage();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { user } = useAuth();
 
-  // Fix duplicate `hourlyRate` and remove unnecessary fields
   const [formData, setFormData] = useState({
     title: "",
     location: "",
-    employmentType: "",
+    projectType: "Commercial",
     hourlyRate: "",
     jobDescription: "",
-    requirements: "",
-    company: "Bharati Construction Ltd",
-    projectType: "Commercial",
-    timeline: "3 months",
-    expiresAfter: "30",
-    postedDate: new Date().toISOString(),
-    status: "active",
+    timeline: "3 months"
   });
 
   const handleChange = (e) => {
@@ -72,99 +66,55 @@ const PostProjectForm = () => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Check if user is authenticated
-    if (!user) {
-      toast({
-        title: "Authentication Required",
-        description: "Please login to post a project.",
-        variant: "destructive",
-      });
-      setIsSubmitting(false);
-      navigate("/login");
-      return;
-    }
-
-    // Validate form
-    const requiredFields = ["title", "location", "projectType", "hourlyRate", "employmentType"];
-    const missingFields = requiredFields.filter((field) => !formData[field]);
-
-    if (missingFields.length > 0) {
-      toast({
-        title: "Missing Information",
-        description: `Please fill in the following fields: ${missingFields.join(", ")}`,
-        variant: "destructive",
-      });
-      setIsSubmitting(false);
-      return;
-    }
-
     try {
-      // Validate and parse hourlyRate
-      const [minRate, maxRate] = formData.hourlyRate
-        .split("-")
-        .map((rate) => parseInt(rate.trim().replace("₹", "")));
-
-      if (isNaN(minRate) || isNaN(maxRate)) {
-        throw new Error("Invalid hourly rate format. Use 'min-max' format.");
-      }
-
-      // Prepare project data for API
       const projectData = {
         title: formData.title,
+        jobDescription: formData.jobDescription,
         location: formData.location,
         projectType: formData.projectType,
-        employmentType: formData.employmentType,
-        description: formData.jobDescription,
-        hourlyRate: { min: minRate, max: maxRate },
-        timeline: {
-          startDate: new Date(),
-          endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
-        },
-        contractor: user._id,
-        status: "active"
+        status: 'active',
+        postedBy: user._id,
+        postedByRole: 'Builder',
+        employmentType: 'Contract',
+        hourlyRate: formData.hourlyRate,
+        timeline: formData.timeline,
+        expiresAfter: "30",
+        company: user.businessName || "Your Company",
+        postedDate: new Date().toISOString()
       };
 
-      console.log("Sending project data:", projectData);
-
-      // Send data to backend
-      const response = await api.createProject(projectData);
-
-      console.log("API Response:", response);
-
-      // Show success toast notification
+      // Create the project using the api instance
+      await api.post('/projects', projectData);
+      
       toast({
-        title: "Job Posted Successfully!",
-        description: "Your job has been posted and is now visible to professionals.",
+        title: "Success",
+        description: "Project posted successfully",
       });
-
-      // Navigate to contractor dashboard
-      navigate("/contractor-dashboard");
+      
+      // Reset form
+      setFormData({
+        title: '',
+        location: '',
+        projectType: 'Commercial',
+        hourlyRate: '',
+        jobDescription: '',
+        timeline: '3 months'
+      });
+      
+      // Close dialog using the onClose prop
+      if (onClose) {
+        onClose();
+      }
     } catch (error) {
-      console.error("Error posting project:", error);
+      console.error('Error creating project:', error);
       toast({
         title: "Error",
-        description: error.response?.data?.message || "Failed to post the job. Please try again.",
+        description: error.response?.data?.message || "Failed to post project",
         variant: "destructive",
       });
     } finally {
       setIsSubmitting(false);
     }
-
-    // Reset form
-    setFormData({
-      title: "",
-      location: "",
-      employmentType: "",
-      hourlyRate: "",
-      jobDescription: "",
-      requirements: "",
-      company: "Bharati Construction Ltd",
-      projectType: "Commercial",
-      timeline: "3 months",
-      expiresAfter: "30",
-      postedDate: new Date().toISOString(),
-      status: "active",
-    });
   };
 
   // Animation variants for enhanced animations
@@ -291,11 +241,11 @@ const PostProjectForm = () => {
           </div>
 
           <div className="mt-6">
-            <Label htmlFor="description">{t("project.jobDescription")}</Label>
+            <Label htmlFor="jobDescription">{t("project.jobDescription")}</Label>
             <textarea
-              id="description"
-              name="description"
-              value={formData.description}
+              id="jobDescription"
+              name="jobDescription"
+              value={formData.jobDescription}
               onChange={handleChange}
               placeholder="Describe the project details..."
               className="w-full mt-1 p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#FF4B55]"
@@ -319,7 +269,7 @@ const PostProjectForm = () => {
             disabled={isSubmitting}
           >
             {isSubmitting ? "Posting..." : "Post Job"}
-          </Button>
+            </Button>
         </div>
       </form>
     </motion.div>

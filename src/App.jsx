@@ -2,7 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ProjectProvider } from "./components/PostProjectForm";
-import { JobProvider } from "./components/PostJobForm";
+import { JobProvider } from "./contexts/JobContext";
 import { Toaster } from "./components/ui/toaster";
 import { Toaster as Sonner } from "./components/ui/sonner";
 import { TooltipProvider } from "./components/ui/tooltip";
@@ -29,8 +29,6 @@ import ProfessionalProfile from './pages/ProfessionalProfile';
 import ProjectDetails from './pages/ProjectDetails';
 import ProjectView from "./pages/ProjectView";
 import ProfessionalMessages from "./pages/ProfessionalMessages";
-import ProfessionalProjects from "./pages/ProfessionalProjects";
-import CompanyProfile from "./pages/CompanyProfile";
 import ProjectDetailView from "./pages/ProjectDetailView";
 import Workers from "./pages/Workers";
 import AppointWorkers from './pages/AppointWorkers';
@@ -75,10 +73,8 @@ const App = () => (
                   <Route path="/project-details/:id" element={<ProjectDetails />} />
                   <Route path="/project-view/:id" element={<ProjectView />} />
                   <Route path="/professional-messages" element={<ProfessionalMessages />} />
-                  <Route path="/professional-projects" element={<ProfessionalProjects />} />
                   <Route path="/contractor-dashboard" element={<ContractorDashboard />} />
                   <Route path="/contractor-job-posting" element={<ContractorJobPosting />} />
-                  <Route path="/company-profile" element={<CompanyProfile />} />
                   <Route path="/project-detail-view/:id" element={<ProjectDetailView />} />
                   <Route path="/workers" element={<Workers />} />
                   <Route path="/appoint-workers" element={<AppointWorkers />} />

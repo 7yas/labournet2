@@ -2,45 +2,70 @@ const express = require('express');
 const router = express.Router();
 const Application = require('../models/Application');
 const Project = require('../models/Project');
+const Contractor = require('../models/Contractor');
+const auth = require('../middleware/auth');
 
-// Get applications for a project
-router.get('/project/:projectId', async (req, res) => {
+// Get all applications for a project
+router.get('/project/:projectId', auth, async (req, res) => {
   try {
+    console.log('Fetching applications for project:', req.params.projectId);
+    console.log('Authenticated user:', req.user._id, req.role);
+
     const applications = await Application.find({ project: req.params.projectId })
-      .populate('worker')
-      .sort('-createdAt');
+      .populate('contractor', 'businessName email phoneNumber');
+
+    if (!applications || applications.length === 0) {
+      return res.status(200).json([]);
+    }
+
     res.json(applications);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('Error fetching applications:', error);
+    res.status(500).json({ 
+      message: 'Error fetching applications',
+      error: error.message 
+    });
   }
 });
 
 // Apply to project
-router.post('/', async (req, res) => {
+router.post('/', auth, async (req, res) => {
   try {
-    // Ensure contractor details are included
-    const applicationData = {
-      ...req.body,
-      contractorDetails: req.body.contractorDetails || {}
-    };
+    const { project, contractor, coverLetter, expectedRate, contractorDetails } = req.body;
     
-    const application = new Application(applicationData);
+    // Validate required fields
+    if (!project || !contractor) {
+      return res.status(400).json({ message: 'Project and contractor are required' });
+    }
+
+    const application = new Application({
+      project,
+      contractor,
+      coverLetter,
+      expectedRate,
+      contractorDetails
+    });
+
     await application.save();
     
     // Update project applicants count
     await Project.findByIdAndUpdate(
-      req.body.project,
+      project,
       { $inc: { applicantsCount: 1 } }
     );
     
     res.status(201).json(application);
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    console.error('Error creating application:', error);
+    res.status(400).json({ 
+      message: 'Error creating application',
+      error: error.message 
+    });
   }
 });
 
 // Update application status
-router.patch('/:id/status', async (req, res) => {
+router.patch('/:id/status', auth, async (req, res) => {
   try {
     const application = await Application.findByIdAndUpdate(
       req.params.id,
@@ -49,7 +74,11 @@ router.patch('/:id/status', async (req, res) => {
     );
     res.json(application);
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    console.error('Error updating application status:', error);
+    res.status(400).json({ 
+      message: 'Error updating application status',
+      error: error.message 
+    });
   }
 });
 

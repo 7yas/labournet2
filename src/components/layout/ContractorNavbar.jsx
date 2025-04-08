@@ -8,7 +8,7 @@ import {
 } from "../ui/navigation-menu";
 import { cn } from "../../lib/utils";
 
-const ProfessionalNavbar = () => {
+const ContractorNavbar = () => {
   const location = useLocation();
   const currentPath = location.pathname;
   
@@ -23,8 +23,9 @@ const ProfessionalNavbar = () => {
       <NavigationMenu className="hidden md:flex">
         <NavigationMenuList className="flex gap-6">
           {[
-            { path: "/professional-dashboard", label: "Dashboard" },
-            { path: "/professional-messages", label: "Messages" },
+            { path: "/contractor-dashboard", label: "Dashboard" },
+            { path: "/contractor-job-posting", label: "Jobs" },
+            { path: "/workers", label: "Workers" },
             { path: "/analytics", label: "Analytics" },
           ].map(({ path, label }) => (
             <NavigationMenuItem key={path}>
@@ -42,10 +43,10 @@ const ProfessionalNavbar = () => {
         </NavigationMenuList>
       </NavigationMenu>
       <div className="flex items-center gap-4">
-        <Link to="/professional-profile">
+        <Link to="/contractor-profile">
           <Avatar className="h-8 w-8 bg-gray-300 cursor-pointer hover:ring-2 hover:ring-[#FF4B55] transition-all duration-300">
             <AvatarImage src="/placeholder.svg" />
-            <AvatarFallback>P</AvatarFallback>
+            <AvatarFallback>C</AvatarFallback>
           </Avatar>
         </Link>
       </div>
@@ -53,4 +54,4 @@ const ProfessionalNavbar = () => {
   );
 };
 
-export default ProfessionalNavbar;
+export default ContractorNavbar; 

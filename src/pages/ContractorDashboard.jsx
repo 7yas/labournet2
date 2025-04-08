@@ -1,15 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { api } from '../services/api';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../components/ui/use-toast';
-import axios from 'axios';
-
-// Correct the PostProjectForm import and usage
-import PostProjectForm from '../components/PostProjectForm'; // Ensure this file exists and is correctly implemented
+import { useAuth } from '../contexts/AuthContext';
+import { getProjects, createProject, createApplication } from '../lib/api';
+import { Link } from 'react-router-dom';
+import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogTrigger } from '../components/ui/dialog';
+import PostJobForm from '../components/PostJobForm';
+import { motion } from 'framer-motion';
+import Footer from '../components/layout/Footer';
+import { Briefcase, Calendar, MapPin, Clock } from 'lucide-react';
+import ContractorNavbar from '../components/layout/ContractorNavbar';
 
 const ContractorDashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [isPostJobDialogOpen, setPostJobDialogOpen] = useState(false);
   const [isContactDialogOpen, setContactDialogOpen] = useState(false);
   const [projects, setProjects] = useState([]);
@@ -23,37 +28,35 @@ const ContractorDashboard = () => {
     hourlyRate: '',
     description: ''
   });
-  const [user, setUser] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("All Categories");
+  const [activeFilter, setActiveFilter] = useState("All Projects");
 
   useEffect(() => {
     const fetchProjects = async () => {
       try {
-        const response = await api.getProjects();
+        setLoading(true);
+        const response = await getProjects();
         setProjects(response.data);
-        setLoading(false);
-      } catch (err) {
+      } catch (error) {
+        console.error('Error fetching projects:', error);
         setError('Failed to fetch projects');
+        if (error.response?.status === 401) {
+          navigate('/login?role=contractor');
+        } else {
+          toast({
+            title: "Error",
+            description: "Failed to fetch projects. Please try again later.",
+            variant: "destructive",
+          });
+        }
+      } finally {
         setLoading(false);
       }
     };
 
     fetchProjects();
-  }, []);
-
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const response = await api.getProfile();
-        setUser(response.data);
-      } catch (error) {
-        console.error('Error fetching user:', error);
-        setError('Failed to fetch user');
-        setLoading(false);
-      }
-    };
-
-    fetchUser();
-  }, []);
+  }, [navigate, toast]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -63,17 +66,17 @@ const ContractorDashboard = () => {
     }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (formData) => {
     try {
+      // Create project data with the current user's ID
       const projectData = {
         ...formData,
         status: 'active',
-        contractor: 'current-user-id', // This should be replaced with actual user ID
+        contractor: user._id,
         employmentType: 'Contract',
         timeline: {
-          startDate: new Date(),
-          endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days from now
+          startDate: formData.startDate,
+          endDate: formData.endDate
         },
         hourlyRate: {
           min: parseInt(formData.hourlyRate.split('-')[0]),
@@ -81,13 +84,38 @@ const ContractorDashboard = () => {
         }
       };
 
-      await api.createProject(projectData);
+      // Create the project
+      await createProject(projectData);
+      
+      // Close the dialog
       setPostJobDialogOpen(false);
-      // Refresh projects list
-      const response = await api.getProjects();
+      
+      // Reset form data
+      setFormData({
+        title: '',
+        projectType: 'Commercial',
+        location: '',
+        timeline: '',
+        hourlyRate: '',
+        description: ''
+      });
+      
+      // Refresh the projects list
+      const response = await getProjects();
       setProjects(response.data);
-    } catch (err) {
-      setError('Failed to create project');
+      
+      // Show success message
+      toast({
+        title: "Success",
+        description: "Project posted successfully",
+      });
+    } catch (error) {
+      console.error('Error creating project:', error);
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to post project",
+        variant: "destructive",
+      });
     }
   };
 
@@ -103,27 +131,37 @@ const ContractorDashboard = () => {
         return;
       }
 
-      // Get contractor's profile details
-      const profileResponse = await api.getProfile();
-      const contractorProfile = profileResponse.data;
+      // Find the project details
+      const project = projects.find(p => p._id === projectId);
+      if (!project) {
+        throw new Error('Project not found');
+      }
 
+      // Create application data
       const applicationData = {
         project: projectId,
-        worker: user._id,
+        contractor: user._id,
         status: 'pending',
-        coverLetter: "I am interested in working on this project",
+        coverLetter: `I am interested in working on your project "${project.title}". I have ${user.yearsOfExperience} years of experience in ${user.businessType}. My business name is ${user.businessName} and I am licensed (License #: ${user.licenseNumber}).`,
         expectedRate: 35,
         contractorDetails: {
-          businessName: contractorProfile.businessName,
-          businessType: contractorProfile.businessType,
-          yearsOfExperience: contractorProfile.yearsOfExperience,
-          licenseNumber: contractorProfile.licenseNumber,
-          insuranceInfo: contractorProfile.insuranceInfo,
-          projectTypes: contractorProfile.projectTypes
+          businessName: user.businessName,
+          businessType: user.businessType,
+          yearsOfExperience: user.yearsOfExperience,
+          licenseNumber: user.licenseNumber,
+          insuranceInfo: user.insuranceInfo,
+          projectTypes: user.projectTypes,
+          address: user.address,
+          phoneNumber: user.phoneNumber,
+          email: user.email
         }
       };
 
-      await api.applyToProject(applicationData);
+      console.log('Submitting application:', applicationData);
+
+      // Submit application
+      const response = await createApplication(applicationData);
+      console.log('Application response:', response.data);
       
       toast({
         title: "Success",
@@ -178,18 +216,18 @@ const ContractorDashboard = () => {
             {isPostJobDialogOpen && (
               <dialog className="max-w-4xl w-full max-h-[90vh] overflow-y-auto p-0 rounded-lg" open>
                 <div className="sticky top-0 flex justify-between items-center bg-white p-4 border-b z-10">
-                  <h2 className="text-lg font-semibold">Post a New Job</h2>
-                  <button 
-                    onClick={closePostJobDialog}
+                    <h2 className="text-lg font-semibold">Post a New Project</h2>
+                          <button
+                            onClick={closePostJobDialog}
                     className="text-gray-500 hover:text-gray-700"
-                  >
+                          >
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <line x1="18" y1="6" x2="6" y2="18"></line>
                       <line x1="6" y1="6" x2="18" y2="18"></line>
                     </svg>
-                  </button>
+                          </button>
                 </div>
-                <PostProjectForm />
+                <PostJobForm onSubmit={handleSubmit} />
               </dialog>
             )}
           </div>
@@ -233,51 +271,58 @@ const ContractorDashboard = () => {
           <h2 className="text-xl font-semibold text-[#121224] mb-6">Available projects</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {projects.map(project => (
-              <div
+            <div
                 key={project._id}
-                className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden hover:border-[#FF4B55] transition-colors card-hover cursor-pointer"
+              className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden hover:border-[#FF4B55] transition-colors card-hover cursor-pointer"
                 onClick={() => navigate(`/project-detail-view/${project._id}`)}
-              >
-                <div className="h-40 bg-gray-200"></div>
-                <div className="p-4">
-                  <div className="flex justify-between mb-2">
+            >
+              <div className="h-40 bg-gray-200"></div>
+              <div className="p-4">
+                <div className="flex justify-between mb-2">
                     <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs">
                       {project.projectType}
                     </span>
-                    <span className="text-sm text-gray-500 flex items-center gap-1">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <polyline points="12 6 12 12 16 14"></polyline>
+                  <span className="text-sm text-gray-500 flex items-center gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <polyline points="12 6 12 12 16 14"></polyline>
                       </svg>
                       {project.timeline?.endDate ? 
                         `${Math.ceil((new Date(project.timeline.endDate) - new Date()) / (1000 * 60 * 60 * 24))} days` : 
                         'Ongoing'}
-                    </span>
-                  </div>
+                  </span>
+                </div>
                   <h3 className="font-semibold mb-1">{project.title}</h3>
-                  <p className="text-sm text-gray-500 mb-3 flex items-center gap-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path>
-                      <circle cx="12" cy="10" r="3"></circle>
+                  <p className="text-sm text-gray-500 mb-1 flex items-center gap-1">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path>
+                    <circle cx="12" cy="10" r="3"></circle>
                     </svg>
                     {project.location}
                   </p>
-                  <div className="flex justify-between items-center">
+                  <p className="text-sm text-gray-500 mb-3 flex items-center gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                      <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                    Posted by: {project.postedBy?.businessName || '-'}
+                </p>
+                <div className="flex justify-between items-center">
                     <span className="text-[#FF4B55] font-bold">
                       ${project.hourlyRate?.min}-{project.hourlyRate?.max}/hr
-                    </span>
-                    <button
-                      className="text-[#FF4B55] text-sm font-medium border border-[#FF4B55] px-3 py-1 rounded hover:bg-[#FF4B55] hover:text-white"
+                  </span>
+                  <button
+                    className="text-[#FF4B55] text-sm font-medium border border-[#FF4B55] px-3 py-1 rounded hover:bg-[#FF4B55] hover:text-white"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleApplyNow(project._id);
                       }}
-                    >
-                      Apply Now
-                    </button>
-                  </div>
+                  >
+                    Apply Now
+                  </button>
                 </div>
               </div>
+            </div>
             ))}
           </div>
         </div>

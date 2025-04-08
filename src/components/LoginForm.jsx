@@ -5,6 +5,7 @@ import { Button } from "../components/ui/button";
 import { Checkbox } from "../components/ui/checkbox";
 import { Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "../contexts/AuthContext";
 
 const LoginForm = ({
   title,
@@ -26,6 +27,7 @@ const LoginForm = ({
   const navigate = useNavigate();
   const location = useLocation();
   const role = new URLSearchParams(location.search).get('role');
+  const { login } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -36,32 +38,7 @@ const LoginForm = ({
     }
 
     try {
-      console.log('Attempting login with:', { email, password, role });
-      const response = await fetch('http://localhost:5000/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email,
-          password,
-          role
-        }),
-      });
-
-      const data = await response.json();
-      console.log('Login response:', data);
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Login failed');
-      }
-
-      // Store user data in localStorage
-      localStorage.setItem('userData', JSON.stringify({
-        ...data.user,
-        isAuthenticated: true
-      }));
-
+      await login(email, password, role);
       toast.success("Successfully signed in");
       
       // Navigate to respective dashboard based on role
@@ -74,7 +51,7 @@ const LoginForm = ({
       }
     } catch (error) {
       console.error('Login error:', error);
-      toast.error(error.message || "Failed to sign in");
+      toast.error(error.response?.data?.message || "Failed to sign in");
     }
   };
 

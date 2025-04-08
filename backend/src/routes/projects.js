@@ -6,25 +6,32 @@ const Contractor = require('../models/Contractor');
 // Get all projects with optional filtering
 router.get('/', async (req, res) => {
   try {
-    const { builder, contractor } = req.query;
+    const { builder, contractor, role } = req.query;
     let query = {};
 
+    // Build query based on parameters
     if (builder) {
-      query.builder = builder;
+      query.postedBy = builder;
     }
     if (contractor) {
       query.contractor = contractor;
     }
+    if (role) {
+      query.postedByRole = role;
+    }
 
-    // Populate contractor details
+    // Get projects with populated postedBy field
     const projects = await Project.find(query)
-      .populate('contractorDetails')
-      .sort('-createdAt');
+      .populate('postedBy', 'fullName email businessName')
+      .sort({ createdAt: -1 });
 
-    res.json(projects);
+    res.status(200).json(projects);
   } catch (error) {
     console.error('Error fetching projects:', error);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ 
+      message: 'Failed to fetch projects',
+      error: error.message 
+    });
   }
 });
 
@@ -32,7 +39,7 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const project = await Project.findById(req.params.id)
-      .populate('contractorDetails');
+      .populate('postedBy', 'fullName email');
     
     if (!project) {
       return res.status(404).json({ message: 'Project not found' });
@@ -47,37 +54,19 @@ router.get('/:id', async (req, res) => {
 // Create project
 router.post('/', async (req, res) => {
   try {
-    // Ensure contractor exists and get their details
-    const contractor = await Contractor.findById(req.body.contractor);
-    if (!contractor) {
-      return res.status(404).json({ 
-        message: 'Contractor not found',
-        details: 'Please complete your contractor profile before posting a job'
-      });
-    }
-
-    // Create the project with contractor details
-    const project = new Project({
-      ...req.body,
-      contractor: contractor._id
-    });
-
-    const newProject = await project.save();
+    console.log('Received project data:', req.body);
     
-    // Populate contractor details before sending response
-    const populatedProject = await Project.findById(newProject._id)
-      .populate('contractorDetails');
+    const project = new Project(req.body);
+    const savedProject = await project.save();
     
-    res.status(201).json(populatedProject);
+    console.log('Project saved successfully:', savedProject);
+    res.status(201).json(savedProject);
   } catch (error) {
     console.error('Error creating project:', error);
-    if (error.name === 'ValidationError') {
-      return res.status(400).json({ 
-        message: 'Validation error',
-        details: Object.values(error.errors).map(err => err.message)
-      });
-    }
-    res.status(400).json({ message: error.message });
+    res.status(400).json({ 
+      message: error.message || 'Failed to create project',
+      details: error.errors || 'No additional error details'
+    });
   }
 });
 
@@ -88,7 +77,7 @@ router.put('/:id', async (req, res) => {
       req.params.id,
       req.body,
       { new: true }
-    ).populate('contractorDetails');
+    ).populate('postedBy', 'fullName email');
     
     if (!project) {
       return res.status(404).json({ message: 'Project not found' });

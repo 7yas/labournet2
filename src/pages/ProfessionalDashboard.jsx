@@ -1,19 +1,201 @@
-
-import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogTrigger } from "../components/ui/dialog";
 import PostProjectForm from "../components/PostProjectForm";
 import { motion } from "framer-motion";
 import Footer from "../components/layout/Footer";
-import { useProjectContext } from "../components/PostProjectForm";
+import { useAuth } from "../contexts/AuthContext";
+import { api } from "../services/api";
+import { useToast } from "../components/ui/use-toast";
 import { Briefcase, Calendar, MapPin, Clock } from "lucide-react";
 import ProfessionalNavbar from "../components/layout/ProfessionalNavbar";
 
-const ProfessionalDashboard= () => {
-  const { projects } = useProjectContext();
+const ProfessionalDashboard = () => {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const { user, loading: authLoading } = useAuth();
+  const [isPostJobDialogOpen, setPostJobDialogOpen] = useState(false);
+  const [isContactDialogOpen, setContactDialogOpen] = useState(false);
+  const [projects, setProjects] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [formData, setFormData] = useState({
+    title: "",
+    projectType: "Commercial",
+    location: "",
+    timeline: "",
+    hourlyRate: "",
+    description: "",
+  });
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All Categories");
   const [activeFilter, setActiveFilter] = useState("All Projects");
+
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get("/projects");
+        setProjects(response.data);
+      } catch (error) {
+        console.error("Error fetching projects:", error);
+        setError("Failed to fetch projects");
+        toast({
+          title: "Error",
+          description: "Failed to fetch projects. Please try again later.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (!authLoading) {
+      fetchProjects();
+    }
+  }, [authLoading, toast]);
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleSubmit = async (formData) => {
+    try {
+      if (!user) {
+        toast({
+          title: "Error",
+          description: "Please log in to post a project",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const projectData = {
+        ...formData,
+        status: "active",
+        postedBy: user._id,
+        postedByRole: "Builder",
+        employmentType: "Contract",
+        timeline: formData.timeline,
+        hourlyRate: formData.hourlyRate,
+        expiresAfter: "30",
+        company: user.businessName || "Your Company",
+        postedDate: new Date().toISOString()
+      };
+
+      await api.post("/projects", projectData);
+      
+      // Fetch updated projects list immediately after posting
+      const response = await api.get("/projects");
+      setProjects(response.data);
+      
+      setPostJobDialogOpen(false);
+      setFormData({
+        title: "",
+        projectType: "Commercial",
+        location: "",
+        timeline: "",
+        hourlyRate: "",
+        description: "",
+      });
+      
+      toast({
+        title: "Success",
+        description: "Project posted successfully",
+      });
+    } catch (error) {
+      console.error("Error creating project:", error);
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to post project",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleApplyNow = async (projectId) => {
+    try {
+      if (!user) {
+        toast({
+          title: "Authentication Required",
+          description: "Please login to apply for projects",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const project = projects.find((p) => p._id === projectId);
+      if (!project) {
+        throw new Error("Project not found");
+      }
+
+      const applicationData = {
+        project: projectId,
+        contractor: user._id,
+        status: "pending",
+        coverLetter: `I am interested in working on your project "${project.title}". I have ${user.yearsOfExperience} years of experience in ${user.businessType}. My business name is ${user.businessName} and I am licensed (License #: ${user.licenseNumber}).`,
+        expectedRate: 35,
+        contractorDetails: {
+          businessName: user.businessName,
+          businessType: user.businessType,
+          yearsOfExperience: user.yearsOfExperience,
+          licenseNumber: user.licenseNumber,
+          insuranceInfo: user.insuranceInfo,
+          projectTypes: user.projectTypes,
+          address: user.address,
+          phoneNumber: user.phoneNumber,
+          email: user.email,
+        },
+      };
+
+      await api.post("/applications", applicationData);
+      
+      toast({
+        title: "Success",
+        description: "Your application has been submitted successfully",
+      });
+    } catch (error) {
+      console.error("Error submitting application:", error);
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to submit application",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const openPostJobDialog = () => setPostJobDialogOpen(true);
+  const closePostJobDialog = () => setPostJobDialogOpen(false);
+
+  const openContactDialog = () => setContactDialogOpen(true);
+  const closeContactDialog = () => setContactDialogOpen(false);
+
+  if (authLoading) {
+    return <div>Loading...</div>;
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-white">
+        <ProfessionalNavbar />
+        <div className="container mx-auto py-8 px-4">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold mb-4">Please log in to access the dashboard</h1>
+            <Link to="/login" className="text-blue-500 hover:underline">
+              Go to Login
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error}</div>;
 
   // Filter projects based on search, category, and status
   const filteredProjects = projects.filter(project => {
@@ -30,24 +212,45 @@ const ProfessionalDashboard= () => {
     console.log("Search term:", searchTerm);
     console.log("Selected category:", selectedCategory);
   };
-  
 
   return (
     <div className="min-h-screen bg-[#F6F6F7] flex flex-col">
-      {/* Header */}
       <ProfessionalNavbar />
 
-      {/* Main Content */}
       <main className="container mx-auto py-8 px-4 flex-grow">
-        <motion.div 
-          className="mb-8"
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-        >
-          <h1 className="text-2xl font-bold text-[#121224]">My Projects</h1>
-          <p className="text-[#717B9E]">Manage your posted construction projects</p>
-        </motion.div>
+        <div className="flex justify-between items-center mb-8">
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <h1 className="text-2xl font-bold text-[#121224]">My Projects</h1>
+            <p className="text-[#717B9E]">Manage your posted construction projects</p>
+          </motion.div>
+
+          {projects.length > 0 && (
+            <Dialog>
+              <DialogTrigger asChild>
+                <motion.button
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  className="bg-[#FF4B55] text-white px-6 py-3 rounded hover:bg-[#E43F49] transition-colors"
+                >
+                  Post New Project
+                </motion.button>
+              </DialogTrigger>
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
+                <DialogTitle>Post Your Project</DialogTitle>
+                <DialogDescription>
+                  Fill out the form below to create a new project.
+                </DialogDescription>
+                <div className="max-h-[calc(90vh-120px)] overflow-y-auto pr-2">
+                  <PostProjectForm />
+                </div>
+              </DialogContent>
+            </Dialog>
+          )}
+        </div>
 
         {/* Search Bar */}
         <motion.form 
@@ -123,7 +326,7 @@ const ProfessionalDashboard= () => {
           {filteredProjects && filteredProjects.length > 0 ? (
             filteredProjects.map((project, index) => (
               <motion.div 
-                key={project.id || index}
+                key={project._id || index}
                 className="bg-white p-6 rounded-lg shadow-sm hover:border-[#FF4B55] border border-transparent transition-colors cursor-pointer"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -131,7 +334,9 @@ const ProfessionalDashboard= () => {
               >
                 <div className="flex justify-between mb-3">
                   <h2 className="text-lg font-semibold text-[#121224]">{project.title}</h2>
-                  <span className="text-[#FF4B55] font-bold">${project.hourlyRate}</span>
+                  <span className="text-[#FF4B55] font-bold">
+                    ${project.hourlyRate?.min}-${project.hourlyRate?.max}/hr
+                  </span>
                 </div>
                 <p className="text-[#717B9E] mb-4">{project.jobDescription?.substring(0, 150)}...</p>
                 <div className="flex justify-between items-center">
@@ -149,7 +354,7 @@ const ProfessionalDashboard= () => {
                        project.status === 'cancelled' ? 'Cancelled' : 'Posted'}
                     </span>
                   </div>
-                  <Link to={`/project-details/${project.id}`} className="text-[#FF4B55] font-medium text-sm hover:underline">View Details →</Link>
+                  <Link to={`/project-detail-view/${project._id}`} className="text-[#FF4B55] font-medium text-sm hover:underline">View Details →</Link>
                 </div>
               </motion.div>
             ))
@@ -196,12 +401,16 @@ const ProfessionalDashboard= () => {
             <p className="text-[#717B9E]">Active Projects</p>
           </div>
           <div>
-            <p className="text-2xl font-bold text-[#121224]">42</p>
+            <p className="text-2xl font-bold text-[#121224]">
+              {projects.reduce((acc, project) => acc + (project.applicantsCount || 0), 0)}
+            </p>
             <p className="text-[#717B9E]">Applications Received</p>
           </div>
           <div>
-            <p className="text-2xl font-bold text-[#121224]">8</p>
-            <p className="text-[#717B9E]">Workers Hired</p>
+            <p className="text-2xl font-bold text-[#121224]">
+              {projects.filter(project => project.status === 'completed').length}
+            </p>
+            <p className="text-[#717B9E]">Completed Projects</p>
           </div>
           <div>
             <p className="text-2xl font-bold text-[#121224]">4.8/5</p>
@@ -210,7 +419,6 @@ const ProfessionalDashboard= () => {
         </motion.div>
       </main>
       
-      {/* Footer */}
       <Footer />
     </div>
   );

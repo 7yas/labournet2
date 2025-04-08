@@ -3,78 +3,76 @@ const mongoose = require('mongoose');
 const projectSchema = new mongoose.Schema({
   title: {
     type: String,
-    required: true
+    required: true,
+    trim: true
   },
-  description: String,
   location: {
     type: String,
-    required: true
+    required: true,
+    trim: true
+  },
+  employmentType: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  hourlyRate: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  jobDescription: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  requirements: {
+    type: String,
+    trim: true
+  },
+  company: {
+    type: String,
+    required: true,
+    trim: true
   },
   projectType: {
     type: String,
-    enum: ['Residential', 'Commercial', 'Industrial'],
-    required: true
+    required: true,
+    trim: true
   },
   timeline: {
-    startDate: Date,
-    endDate: Date
+    type: String,
+    required: true,
+    trim: true
   },
-  hourlyRate: {
-    min: Number,
-    max: Number
+  expiresAfter: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  postedDate: {
+    type: Date,
+    default: Date.now
   },
   status: {
     type: String,
-    enum: ['draft', 'active', 'completed', 'cancelled'],
-    default: 'active'
+    default: 'active',
+    enum: ['active', 'completed', 'cancelled']
   },
-  contractor: {
+  postedBy: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Contractor',
-    required: true
+    required: true,
+    refPath: 'postedByRole'
   },
-  workers: [{
-    worker: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Worker'
-    },
-    status: {
-      type: String,
-      enum: ['pending', 'accepted', 'rejected'],
-      default: 'pending'
-    },
-    appliedAt: {
-      type: Date,
-      default: Date.now
-    }
-  }],
-  employmentType: {
+  postedByRole: {
     type: String,
-    enum: ['Full-time', 'Part-time', 'Contract'],
-    required: true
-  },
-  applicantsCount: {
-    type: Number,
-    default: 0
-  },
-  progress: {
-    type: Number,
-    default: 0
+    required: true,
+    enum: ['Builder', 'Contractor', 'Worker', 'professional']
   }
 }, {
   timestamps: true
 });
 
-// Add virtual population for contractor details
-projectSchema.virtual('contractorDetails', {
-  ref: 'Contractor',
-  localField: 'contractor',
-  foreignField: '_id',
-  justOne: true
-});
+const Project = mongoose.model('Project', projectSchema);
 
-// Ensure virtuals are included in toJSON
-projectSchema.set('toJSON', { virtuals: true });
-projectSchema.set('toObject', { virtuals: true });
-
-module.exports = mongoose.model('Project', projectSchema); 
+module.exports = Project; 

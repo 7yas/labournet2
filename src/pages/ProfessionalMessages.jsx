@@ -1,152 +1,104 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { Button } from "../components/ui/button";
 import { CheckCircle, Clock, MapPin, Star, User, X } from "lucide-react";
 import { useAuth } from '../contexts/AuthContext';
-import axios from 'axios';
+import { getProjects, getProjectApplications, updateApplicationStatus } from '../lib/api';
 import { useToast } from '../components/ui/use-toast';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog';
+import { Briefcase, Phone, Mail, Award } from 'lucide-react';
 
 const ProfessionalMessages = () => {
-  const { user } = useAuth();
-  const [applicants, setApplicants] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [filters, setFilters] = useState({
-    availableNow: false,
-    verifiedOnly: false,
-    minRating: 0
-  });
+  const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
+  const [applications, setApplications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [selectedApplicant, setSelectedApplicant] = useState(null);
+  const [showDetailsDialog, setShowDetailsDialog] = useState(false);
 
-  const handleFilterChange = (e) => {
-    const { name, checked } = e.target;
-    setFilters(prev => ({
-      ...prev,
-      [name]: checked
-    }));
-  };
-  
   useEffect(() => {
-    const fetchApplicants = async () => {
-      try {
-        // First, fetch the builder's projects
-        const projectsResponse = await axios.get(`/api/projects?builder=${user._id}`);
-        const projects = Array.isArray(projectsResponse.data) ? projectsResponse.data : [];
-
-        if (projects.length === 0) {
-          setApplicants([]);
-          setLoading(false);
-          return;
-        }
-
-        // For each project, fetch its applications
-        const applicationsPromises = projects.map(async (project) => {
-          try {
-            const applicationsResponse = await axios.get(`/api/applications/project/${project._id}`);
-            const applications = Array.isArray(applicationsResponse.data) ? applicationsResponse.data : [];
-            
-            // For each application, fetch the contractor details
-            const applicationsWithContractorDetails = await Promise.all(
-              applications.map(async (application) => {
-                try {
-                  // Get contractor details from the application
-                  const contractor = application.worker;
-                  return {
-                    ...application,
-                    projectTitle: project.title,
-                    projectName: project.title,
-                    contractor: {
-                      businessName: contractor.businessName,
-                      businessType: contractor.businessType,
-                      yearsOfExperience: contractor.yearsOfExperience,
-                      licenseNumber: contractor.licenseNumber,
-                      insuranceInfo: contractor.insuranceInfo,
-                      projectTypes: contractor.projectTypes
-                    }
-                  };
-                } catch (error) {
-                  console.error(`Error processing contractor details for application ${application._id}:`, error);
-                  return null;
-                }
-              })
-            );
-
-            return applicationsWithContractorDetails.filter(app => app !== null);
-          } catch (error) {
-            console.error(`Error fetching applications for project ${project._id}:`, error);
-            return [];
-          }
-        });
-
-        const applicationsArrays = await Promise.all(applicationsPromises);
-        const allApplications = applicationsArrays.flat();
-
-        if (allApplications.length === 0) {
-          setApplicants([]);
-          setLoading(false);
-          return;
-        }
-
-        setApplicants(allApplications);
-      } catch (error) {
-        console.error('Error fetching applicants:', error);
-        toast({
-          title: "Error",
-          description: "Failed to fetch applicants",
-          variant: "destructive",
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (user?._id) {
-      fetchApplicants();
-    } else {
-      setLoading(false);
+    if (!user) {
+      navigate('/login?role=professional');
+      return;
     }
-  }, [user, toast]);
+    fetchApplications();
+  }, [user, navigate]);
 
-  const handleAccept = async (applicationId) => {
+  const fetchApplications = async () => {
     try {
-      await axios.patch(`/api/applications/${applicationId}/status`, {
-        status: 'accepted'
-      });
+      setLoading(true);
+      setError(null);
+
+      // Get all projects for the professional
+      const projectsResponse = await getProjects();
+      console.log('Projects response:', projectsResponse.data);
       
-      // Update the applicants list to remove the accepted application
-      setApplicants(prev => prev.filter(app => app._id !== applicationId));
-      
-      toast({
-        title: "Success",
-        description: "Application accepted successfully",
+      // Filter projects where the professional is the owner
+      const professionalProjects = projectsResponse.data.filter(
+        project => project.postedBy === user._id
+      );
+      console.log('Professional projects:', professionalProjects);
+
+      if (professionalProjects.length === 0) {
+        console.log('No projects found for professional');
+        setApplications([]);
+        setLoading(false);
+        return;
+      }
+
+      // Get applications for each project
+      const applicationsPromises = professionalProjects.map(async (project) => {
+        try {
+          const response = await getProjectApplications(project._id);
+          return response.data.map(app => ({
+            ...app,
+            projectTitle: project.title,
+            projectId: project._id
+          }));
+        } catch (error) {
+          console.error(`Error fetching applications for project ${project._id}:`, error);
+          return [];
+        }
       });
+
+      const applicationsResults = await Promise.all(applicationsPromises);
+      const allApplications = applicationsResults.flat();
+      console.log('All applications:', allApplications);
+      
+      setApplications(allApplications);
     } catch (error) {
+      console.error('Error in fetchApplications:', error);
+      setError('Failed to fetch applications');
       toast({
         title: "Error",
-        description: "Failed to accept application",
+        description: "Failed to fetch applications. Please try again later.",
         variant: "destructive",
       });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleReject = async (applicationId) => {
+  const handleApplicationStatus = async (applicationId, status) => {
     try {
-      await axios.patch(`/api/applications/${applicationId}/status`, {
-        status: 'rejected'
-      });
-      
-      // Update the applicants list to remove the rejected application
-      setApplicants(prev => prev.filter(app => app._id !== applicationId));
-      
+      await updateApplicationStatus(applicationId, status);
       toast({
         title: "Success",
-        description: "Application rejected successfully",
+        description: `Application ${status} successfully`,
       });
+      
+      // Update the local state
+      setApplications(applications.map(app => 
+        app._id === applicationId ? { ...app, status } : app
+      ));
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to reject application",
+        description: `Failed to ${status} application`,
         variant: "destructive",
       });
     }
@@ -154,11 +106,30 @@ const ProfessionalMessages = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FF4B55] mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading applicants...</p>
+      <div className="min-h-screen bg-gray-100 p-6">
+        <div className="max-w-6xl mx-auto">
+          <div className="animate-pulse">
+            <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="bg-white p-6 rounded-lg shadow">
+                  <div className="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
+                  <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-100 p-6">
+        <div className="max-w-6xl mx-auto">
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+            <p>{error}</p>
           </div>
         </div>
       </div>
@@ -175,7 +146,6 @@ const ProfessionalMessages = () => {
         </Link>
         <nav className="hidden md:flex items-center space-x-6">
           <Link to="/professional-dashboard" className="hover:text-[#FF4B55]">Dashboard</Link>
-          <Link to="/professional-projects" className="hover:text-[#FF4B55]">Find Projects</Link>
           <Link to="/professional-profile" className="hover:text-[#FF4B55]">My Profile</Link>
           <Link to="/professional-messages" className="hover:text-[#FF4B55] text-[#FF4B55]">Messages</Link>
         </nav>
@@ -189,129 +159,171 @@ const ProfessionalMessages = () => {
       {/* Main Content */}
       <main className="container mx-auto py-8 px-4">
         <div className="flex flex-col md:flex-row">
-          {/* Left Sidebar - Filters */}
-          <div className="w-full md:w-1/4 md:pr-8 mb-6 md:mb-0">
-            <h2 className="text-xl font-bold mb-4">Filters</h2>
+          {/* Main Content */}
+          <div className="w-full">
+            <h2 className="text-xl font-bold mb-4">Applications</h2>
             
+            {/* Application Cards */}
             <div className="space-y-4">
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="availableNow"
-                  name="availableNow"
-                  checked={filters.availableNow}
-                  onChange={handleFilterChange}
-                  className="h-4 w-4 text-[#FF4B55] border-gray-300 rounded focus:ring-[#FF4B55]"
-                />
-                <label htmlFor="availableNow" className="ml-2 text-sm text-gray-700">
-                  Available Now
-                </label>
+              {applications.length > 0 ? (
+                applications.map((application) => (
+                  <div 
+                    key={application._id}
+                    className="bg-white rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <h2 className="text-lg font-semibold">{application.projectTitle}</h2>
+                        <p className="text-sm text-gray-500">From: {application.contractor?.businessName || 'Unknown Contractor'}</p>
+                      </div>
+                      <span className={`px-3 py-1 rounded-full text-sm ${
+                        application.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                        application.status === 'accepted' ? 'bg-green-100 text-green-800' :
+                        'bg-red-100 text-red-800'
+                      }`}>
+                        {application.status}
+                      </span>
               </div>
               
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="verifiedOnly"
-                  name="verifiedOnly"
-                  checked={filters.verifiedOnly}
-                  onChange={handleFilterChange}
-                  className="h-4 w-4 text-[#FF4B55] border-gray-300 rounded focus:ring-[#FF4B55]"
-                />
-                <label htmlFor="verifiedOnly" className="ml-2 text-sm text-gray-700">
-                  Verified Only
-                </label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+                      <div>
+                        <h3 className="font-medium mb-2">Contractor Details</h3>
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Briefcase className="h-4 w-4 text-gray-500" />
+                            <span>{application.contractor?.businessName || '-'}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Mail className="h-4 w-4 text-gray-500" />
+                            <span>{application.contractor?.email || '-'}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Phone className="h-4 w-4 text-gray-500" />
+                            <span>{application.contractor?.phoneNumber || '-'}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <MapPin className="h-4 w-4 text-gray-500" />
+                            <span>{application.contractor?.address || '-'}</span>
+                          </div>
+                        </div>
               </div>
               
               <div>
-                <h3 className="text-sm font-medium mb-2">Minimum Rating</h3>
-                <div className="flex items-center gap-1">
-                  {[4, 3, 2, 1].map((rating) => (
-                    <button
-                      key={rating}
-                      onClick={() => setFilters(prev => ({ ...prev, minRating: rating }))}
-                      className={`p-2 rounded ${
-                        filters.minRating === rating 
-                          ? "bg-[#FF4B55] text-white" 
-                          : "bg-gray-100 text-gray-700"
-                      }`}
-                    >
-                      {rating}+
-                    </button>
-                  ))}
+                        <h3 className="font-medium mb-2">Professional Information</h3>
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-4 w-4 text-gray-500" />
+                            <span>{application.contractor?.yearsOfExperience || '0'} years of experience</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Award className="h-4 w-4 text-gray-500" />
+                            <span>License: {application.contractor?.licenseNumber || '-'}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Briefcase className="h-4 w-4 text-gray-500" />
+                            <span>Business Type: {application.contractor?.businessType || '-'}</span>
                 </div>
               </div>
             </div>
           </div>
           
-          {/* Main Content */}
-          <div className="w-full md:w-3/4">
-            <h2 className="text-xl font-bold mb-4">Applications</h2>
-            
-            {applicants.length > 0 ? (
-              <div className="space-y-4">
-                {applicants.map((application) => (
-                  <div key={application._id} className="bg-white rounded-lg shadow-sm p-6">
-                    <div className="flex justify-between items-start mb-4">
-                          <div>
-                        <h3 className="text-lg font-semibold">{application.contractor.businessName}</h3>
-                        <p className="text-gray-600">{application.contractor.businessType}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm text-gray-500">Applied for</p>
-                        <p className="font-medium">{application.projectTitle}</p>
+                    <div className="mb-4">
+                      <h3 className="font-medium mb-2">Skills & Certifications</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {application.contractor?.skills?.map((skill, index) => (
+                          <span key={index} className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-sm">
+                            {skill}
+                          </span>
+                        ))}
+                </div>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {application.contractor?.certifications?.map((cert, index) => (
+                          <span key={index} className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-sm">
+                            {cert}
+                                </span>
+                        ))}
                             </div>
                           </div>
                           
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div className="flex justify-between items-center">
                       <div>
-                        <p className="text-sm text-gray-500">Business License</p>
-                        <p className="font-medium">{application.contractor.businessLicense}</p>
-                        </div>
-                      <div>
-                        <p className="text-sm text-gray-500">Years of Experience</p>
-                        <p className="font-medium">{application.contractor.yearsOfExperience} years</p>
+                        <p className="text-sm text-gray-500">Expected Rate: ${application.expectedRate}/hr</p>
+                        <p className="text-sm text-gray-500">Availability: {application.contractor?.availability || '-'}</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedApplicant(application);
+                            setShowDetailsDialog(true);
+                          }}
+                        >
+                          View Details
+                        </Button>
+                        {application.status === 'pending' && (
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-green-600 border-green-600 hover:bg-green-600 hover:text-white"
+                              onClick={() => handleApplicationStatus(application._id, 'accepted')}
+                            >
+                              <CheckCircle className="h-4 w-4 mr-1" />
+                              Accept
+                            </Button>
+                          <Button
+                              variant="outline"
+                            size="sm"
+                              className="text-red-600 border-red-600 hover:bg-red-600 hover:text-white"
+                              onClick={() => handleApplicationStatus(application._id, 'rejected')}
+                          >
+                              <X className="h-4 w-4 mr-1" />
+                              Reject
+                          </Button>
                           </div>
-                      <div>
-                        <p className="text-sm text-gray-500">License Number</p>
-                        <p className="font-medium">{application.contractor.licenseNumber}</p>
-                          </div>
-                      <div>
-                        <p className="text-sm text-gray-500">Insurance Info</p>
-                        <p className="font-medium">{application.contractor.insuranceInfo}</p>
-                          </div>
-                        </div>
-                        
-                    <div className="flex justify-end gap-4 mt-4">
-                      <Button
-                        variant="outline"
-                        className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
-                        onClick={() => handleReject(application._id)}
-                      >
-                        Reject
-                      </Button>
-                      <Button
-                        variant="outline"
-                        className="border-green-500 text-green-500 hover:bg-green-500 hover:text-white"
-                        onClick={() => handleAccept(application._id)}
-                      >
-                        Accept
-                      </Button>
+                        )}
+                      </div>
                     </div>
                   </div>
-                ))}
+                ))
+              ) : (
+                <div className="text-center py-12">
+                  <User className="h-16 w-16 mx-auto text-gray-300 mb-3" />
+                  <h3 className="text-lg font-medium text-gray-600">No Applications Yet</h3>
+                  <p className="text-gray-500">
+                    When contractors apply to your projects, they will appear here.
+                  </p>
               </div>
-            ) : (
-              <div className="text-center py-12">
-                <User className="h-16 w-16 mx-auto text-gray-300 mb-3" />
-                <h3 className="text-lg font-medium text-gray-600">No Applications Yet</h3>
-                <p className="text-gray-500">
-                  When contractors apply to your projects, they will appear here.
-                </p>
+              )}
             </div>
-            )}
           </div>
         </div>
       </main>
+
+      <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Application Details</DialogTitle>
+          </DialogHeader>
+          {selectedApplicant && (
+            <div className="space-y-4">
+              <div>
+                <h3 className="font-medium mb-2">Cover Letter</h3>
+                <p className="text-gray-600">{selectedApplicant.coverLetter}</p>
+              </div>
+              <div>
+                <h3 className="font-medium mb-2">Insurance Information</h3>
+                <p className="text-gray-600">{selectedApplicant.contractor?.insuranceInfo || '-'}</p>
+              </div>
+              <div>
+                <h3 className="font-medium mb-2">Project Types</h3>
+                <p className="text-gray-600">{selectedApplicant.contractor?.projectTypes || '-'}</p>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

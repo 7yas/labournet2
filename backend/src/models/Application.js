@@ -6,9 +6,9 @@ const applicationSchema = new mongoose.Schema({
     ref: 'Project',
     required: true
   },
-  worker: {
+  contractor: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
+    ref: 'Contractor',
     required: true
   },
   status: {
@@ -24,7 +24,12 @@ const applicationSchema = new mongoose.Schema({
     yearsOfExperience: Number,
     licenseNumber: String,
     insuranceInfo: String,
-    projectTypes: [String]
+    projectTypes: [String],
+    address: String,
+    certifications: [String],
+    skills: [String],
+    hourlyRate: Number,
+    availability: String
   }
 }, {
   timestamps: true

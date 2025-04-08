@@ -6,6 +6,7 @@ import { Checkbox } from "../components/ui/checkbox";
 import { Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { Label } from "../components/ui/label";
+import api from "../lib/api";
 
 const SignUpForm = ({
   title,
@@ -86,23 +87,14 @@ const SignUpForm = ({
       return;
     }
 
-    // Debug: Log the form data
-    console.log('Submitting form data:', {
-      email,
-      password,
-      fullName,
-      role,
-      ...formData
-    });
-
     try {
       // Map the role to what the server expects
       const serverRole = role === 'professional' ? 'builder' : role;
       
       let requestBody = {
-        email,
+      email,
         password,
-        fullName,
+      fullName,
         role: serverRole,
         ...formData
       };
@@ -147,29 +139,15 @@ const SignUpForm = ({
         };
       }
 
-      // Create profile directly with the auth endpoint
-      const response = await fetch('http://localhost:5000/api/auth/signup', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
-      });
+      // Create profile using the api service
+      const response = await api.post('/auth/signup', requestBody);
+      const { user: userData, token } = response.data;
 
-      const data = await response.json();
-      console.log('Server response:', data);
+      // Store both user data and token
+      localStorage.setItem('userData', JSON.stringify(userData));
+      localStorage.setItem('authToken', token);
 
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to create account');
-      }
-
-      // Store user data in localStorage for simple session management
-      localStorage.setItem('userData', JSON.stringify({
-        ...data.user,
-        isAuthenticated: true
-      }));
-
-      toast.success(data.message || "Account created successfully");
+      toast.success("Account created successfully");
       
       // Navigate to respective dashboard based on role
       if (role === 'professional') {
@@ -181,7 +159,7 @@ const SignUpForm = ({
       }
     } catch (error) {
       console.error('Signup error:', error);
-      toast.error(error.message || "Failed to create account");
+      toast.error(error.response?.data?.message || "Failed to create account");
     }
   };
 
@@ -209,418 +187,416 @@ const SignUpForm = ({
           </h2>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="space-y-4 rounded-md shadow-sm">
-            <div>
-              <Label htmlFor="email">{emailLabel}</Label>
+          <div>
+            <Label htmlFor="email">{emailLabel}</Label>
           <Input
             id="email"
-                name="email"
+              name="email"
             type="email"
-                autoComplete="email"
-                required
-                className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                placeholder={emailPlaceholder}
+              autoComplete="email"
+              required
+              className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+              placeholder={emailPlaceholder}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-              />
-            </div>
-            <div>
-              <Label htmlFor="fullName">Full Name</Label>
-              <Input
-                id="fullName"
-                name="fullName"
-                type="text"
+            />
+          </div>
+          <div>
+            <Label htmlFor="fullName">Full Name</Label>
+            <Input
+              id="fullName"
+              name="fullName"
+              type="text"
             required
-                className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                placeholder="Enter your full name"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
+              className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+              placeholder="Enter your full name"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
           />
         </div>
-            <div>
-              <Label htmlFor="password">Password</Label>
+          <div>
+            <Label htmlFor="password">Password</Label>
           <div className="relative">
             <Input
               id="password"
-                  name="password"
+                name="password"
               type={showPassword ? "text" : "password"}
-                  autoComplete="current-password"
-                  required
-                  className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                  placeholder="Enter your password"
+                autoComplete="current-password"
+                required
+                className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                placeholder="Enter your password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
             {showPasswordToggle && (
               <button
                 type="button"
-                    className="absolute inset-y-0 right-0 flex items-center pr-3"
+                  className="absolute inset-y-0 right-0 flex items-center pr-3"
                 onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-5 w-5 text-gray-400" />
-                    ) : (
-                      <Eye className="h-5 w-5 text-gray-400" />
-                    )}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-5 w-5 text-gray-400" />
+                  ) : (
+                    <Eye className="h-5 w-5 text-gray-400" />
+                  )}
               </button>
             )}
           </div>
         </div>
-            <div>
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
+          <div>
+            <Label htmlFor="confirmPassword">Confirm Password</Label>
           <Input
             id="confirmPassword"
-                name="confirmPassword"
+              name="confirmPassword"
             type="password"
-                required
-                className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                placeholder="Confirm your password"
+              required
+              className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+              placeholder="Confirm your password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
           />
         </div>
 
-            {/* Role-specific fields */}
-            {role === 'contractor' && (
-              <>
-                <div>
-                  <Label htmlFor="businessName">Business Name</Label>
-                  <Input
-                    id="businessName"
-                    name="businessName"
-                    type="text"
-                    required
-                    className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                    placeholder="Enter your business name"
-                    value={formData.businessName}
-                    onChange={handleChange}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="businessLicense">Business License</Label>
-                  <Input
-                    id="businessLicense"
-                    name="businessLicense"
-                    type="text"
-                    required
-                    className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                    placeholder="Enter your business license number"
-                    value={formData.businessLicense}
-                    onChange={handleChange}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="businessType">Business Type</Label>
-                  <Input
-                    id="businessType"
-                    name="businessType"
-                    type="text"
-                    required
-                    className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                    placeholder="Enter your business type"
-                    value={formData.businessType}
-                    onChange={handleChange}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="yearsOfExperience">Years of Experience</Label>
-                  <Input
-                    id="yearsOfExperience"
-                    name="yearsOfExperience"
-                    type="number"
-                    required
-                    className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                    placeholder="Enter years of experience"
-                    value={formData.yearsOfExperience}
-                    onChange={handleChange}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="licenseNumber">License Number</Label>
-                  <Input
-                    id="licenseNumber"
-                    name="licenseNumber"
-                    type="text"
-                    required
-                    className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                    placeholder="Enter your license number"
-                    value={formData.licenseNumber}
-                    onChange={handleChange}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="insuranceInfo">Insurance Information</Label>
-                  <Input
-                    id="insuranceInfo"
-                    name="insuranceInfo"
-                    type="text"
-                    required
-                    className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                    placeholder="Enter your insurance information"
-                    value={formData.insuranceInfo}
-                    onChange={handleChange}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="projectTypes">Project Types</Label>
-                  <Input
-                    id="projectTypes"
-                    name="projectTypes"
-                    type="text"
-                    required
-                    className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                    placeholder="Enter project types you handle"
-                    value={formData.projectTypes}
-                    onChange={handleChange}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="phoneNumber">Phone Number</Label>
-                  <Input
-                    id="phoneNumber"
-                    name="phoneNumber"
-                    type="tel"
-                    required
-                    className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                    placeholder="Enter your phone number"
-                    value={formData.phoneNumber}
-                    onChange={handleChange}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="address">Address</Label>
-                  <Input
-                    id="address"
-                    name="address"
-                    type="text"
-                    required
-                    className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                    placeholder="Enter your address"
-                    value={formData.address}
-                    onChange={handleChange}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="teamSize">Team Size</Label>
-                  <Input
-                    id="teamSize"
-                    name="teamSize"
-                    type="number"
-                    required
-                    className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                    placeholder="Enter your team size"
-                    value={formData.teamSize}
-                    onChange={handleChange}
-                  />
-                </div>
-              </>
-            )}
+          {/* Role-specific fields */}
+          {role === 'contractor' && (
+            <>
+              <div>
+                <Label htmlFor="businessName">Business Name</Label>
+                <Input
+                  id="businessName"
+                  name="businessName"
+                  type="text"
+                  required
+                  className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                  placeholder="Enter your business name"
+                  value={formData.businessName}
+                  onChange={handleChange}
+                />
+              </div>
+              <div>
+                <Label htmlFor="businessLicense">Business License</Label>
+                <Input
+                  id="businessLicense"
+                  name="businessLicense"
+                  type="text"
+                  required
+                  className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                  placeholder="Enter your business license number"
+                  value={formData.businessLicense}
+                  onChange={handleChange}
+                />
+              </div>
+              <div>
+                <Label htmlFor="businessType">Business Type</Label>
+                <Input
+                  id="businessType"
+                  name="businessType"
+                  type="text"
+                  required
+                  className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                  placeholder="Enter your business type"
+                  value={formData.businessType}
+                  onChange={handleChange}
+                />
+              </div>
+              <div>
+                <Label htmlFor="yearsOfExperience">Years of Experience</Label>
+                <Input
+                  id="yearsOfExperience"
+                  name="yearsOfExperience"
+                  type="number"
+                  required
+                  className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                  placeholder="Enter years of experience"
+                  value={formData.yearsOfExperience}
+                  onChange={handleChange}
+                />
+              </div>
+              <div>
+                <Label htmlFor="licenseNumber">License Number</Label>
+                <Input
+                  id="licenseNumber"
+                  name="licenseNumber"
+                  type="text"
+                  required
+                  className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                  placeholder="Enter your license number"
+                  value={formData.licenseNumber}
+                  onChange={handleChange}
+                />
+              </div>
+              <div>
+                <Label htmlFor="insuranceInfo">Insurance Information</Label>
+                <Input
+                  id="insuranceInfo"
+                  name="insuranceInfo"
+                  type="text"
+                  required
+                  className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                  placeholder="Enter your insurance information"
+                  value={formData.insuranceInfo}
+                  onChange={handleChange}
+                />
+              </div>
+              <div>
+                <Label htmlFor="projectTypes">Project Types</Label>
+                <Input
+                  id="projectTypes"
+                  name="projectTypes"
+                  type="text"
+                  required
+                  className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                  placeholder="Enter project types (comma separated)"
+                  value={formData.projectTypes}
+                  onChange={handleChange}
+                />
+              </div>
+              <div>
+                <Label htmlFor="phoneNumber">Phone Number</Label>
+                <Input
+                  id="phoneNumber"
+                  name="phoneNumber"
+                  type="tel"
+                  required
+                  className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                  placeholder="Enter your phone number"
+                  value={formData.phoneNumber}
+                  onChange={handleChange}
+                />
+              </div>
+              <div>
+                <Label htmlFor="address">Address</Label>
+                <Input
+                  id="address"
+                  name="address"
+                  type="text"
+                  required
+                  className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                  placeholder="Enter your address"
+                  value={formData.address}
+                  onChange={handleChange}
+                />
+              </div>
+              <div>
+                <Label htmlFor="teamSize">Team Size</Label>
+                <Input
+                  id="teamSize"
+                  name="teamSize"
+                  type="number"
+                  required
+                  className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                  placeholder="Enter your team size"
+                  value={formData.teamSize}
+                  onChange={handleChange}
+                />
+              </div>
+            </>
+          )}
 
-            {role === 'worker' && (
-              <>
-                <div>
-                  <Label htmlFor="yearsOfExperience">Years of Experience</Label>
-                  <Input
-                    id="yearsOfExperience"
-                    name="yearsOfExperience"
-                    type="number"
-                    required
-                    className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                    placeholder="Enter years of experience"
-                    value={formData.yearsOfExperience}
-                    onChange={handleChange}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="skills">Skills (comma-separated)</Label>
-                  <Input
-                    id="skills"
-                    name="skills"
-                    type="text"
-                    required
-                    className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                    placeholder="Enter your skills (e.g., Carpentry, Plumbing, Electrical)"
-                    value={formData.skills}
-                    onChange={handleChange}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="certifications">Certifications (comma-separated)</Label>
-                  <Input
-                    id="certifications"
-                    name="certifications"
-                    type="text"
-                    required
-                    className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                    placeholder="Enter your certifications (e.g., OSHA, First Aid)"
-                    value={formData.certifications}
-                    onChange={handleChange}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="hourlyRate">Hourly Rate ($)</Label>
-                  <Input
-                    id="hourlyRate"
-                    name="hourlyRate"
-                    type="number"
-                    required
-                    className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                    placeholder="Enter your hourly rate"
-                    value={formData.hourlyRate}
-                    onChange={handleChange}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="availability">Availability</Label>
-                  <Input
-                    id="availability"
-                    name="availability"
-                    type="text"
-                    required
-                    className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                    placeholder="Enter your availability"
-                    value={formData.availability}
-                    onChange={handleChange}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="description">Description</Label>
-                  <Input
-                    id="description"
-                    name="description"
-                    type="text"
-                    required
-                    className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                    placeholder="Enter a brief description about yourself"
-                    value={formData.description}
-                    onChange={handleChange}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="phoneNumber">Phone Number</Label>
-                  <Input
-                    id="phoneNumber"
-                    name="phoneNumber"
-                    type="tel"
-                    required
-                    className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                    placeholder="Enter your phone number"
-                    value={formData.phoneNumber}
-                    onChange={handleChange}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="address">Address</Label>
-                  <Input
-                    id="address"
-                    name="address"
-                    type="text"
-                    required
-                    className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                    placeholder="Enter your address"
-                    value={formData.address}
-                    onChange={handleChange}
-                  />
-                </div>
-              </>
-            )}
+          {role === 'worker' && (
+            <>
+              <div>
+                <Label htmlFor="yearsOfExperience">Years of Experience</Label>
+                <Input
+                  id="yearsOfExperience"
+                  name="yearsOfExperience"
+                  type="number"
+                  required
+                  className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                  placeholder="Enter years of experience"
+                  value={formData.yearsOfExperience}
+                  onChange={handleChange}
+                />
+              </div>
+              <div>
+                <Label htmlFor="skills">Skills</Label>
+                <Input
+                  id="skills"
+                  name="skills"
+                  type="text"
+                  required
+                  className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                  placeholder="Enter your skills (comma separated)"
+                  value={formData.skills}
+                  onChange={handleChange}
+                />
+              </div>
+              <div>
+                <Label htmlFor="certifications">Certifications</Label>
+                <Input
+                  id="certifications"
+                  name="certifications"
+                  type="text"
+                  required
+                  className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                  placeholder="Enter your certifications (comma separated)"
+                  value={formData.certifications}
+                  onChange={handleChange}
+                />
+              </div>
+              <div>
+                <Label htmlFor="hourlyRate">Hourly Rate</Label>
+                <Input
+                  id="hourlyRate"
+                  name="hourlyRate"
+                  type="number"
+                  required
+                  className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                  placeholder="Enter your hourly rate"
+                  value={formData.hourlyRate}
+                  onChange={handleChange}
+                />
+              </div>
+              <div>
+                <Label htmlFor="availability">Availability</Label>
+                <Input
+                  id="availability"
+                  name="availability"
+                  type="text"
+                  required
+                  className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                  placeholder="Enter your availability"
+                  value={formData.availability}
+                  onChange={handleChange}
+                />
+              </div>
+              <div>
+                <Label htmlFor="description">Description</Label>
+                <Input
+                  id="description"
+                  name="description"
+                  type="text"
+                  required
+                  className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                  placeholder="Enter a brief description about yourself"
+                  value={formData.description}
+                  onChange={handleChange}
+                />
+              </div>
+              <div>
+                <Label htmlFor="phoneNumber">Phone Number</Label>
+                <Input
+                  id="phoneNumber"
+                  name="phoneNumber"
+                  type="tel"
+                  required
+                  className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                  placeholder="Enter your phone number"
+                  value={formData.phoneNumber}
+                  onChange={handleChange}
+                />
+              </div>
+              <div>
+                <Label htmlFor="address">Address</Label>
+                <Input
+                  id="address"
+                  name="address"
+                  type="text"
+                  required
+                  className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                  placeholder="Enter your address"
+                  value={formData.address}
+                  onChange={handleChange}
+                />
+              </div>
+            </>
+          )}
 
-            {role === 'professional' && (
-              <>
-                <div>
-                  <Label htmlFor="businessName">Business Name</Label>
-                  <Input
-                    id="businessName"
-                    name="businessName"
-                    type="text"
-                    required
-                    className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                    placeholder="Enter your business name"
-                    value={formData.businessName}
-                    onChange={handleChange}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="businessLicense">Business License</Label>
-                  <Input
-                    id="businessLicense"
-                    name="businessLicense"
-                    type="text"
-                    required
-                    className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                    placeholder="Enter your business license number"
-                    value={formData.businessLicense}
-                    onChange={handleChange}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="yearsOfExperience">Years of Experience</Label>
-                  <Input
-                    id="yearsOfExperience"
-                    name="yearsOfExperience"
-                    type="number"
-                    required
-                    className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                    placeholder="Enter years of experience"
-                    value={formData.yearsOfExperience}
-                    onChange={handleChange}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="licenseNumber">License Number</Label>
-                  <Input
-                    id="licenseNumber"
-                    name="licenseNumber"
-                    type="text"
-                    required
-                    className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                    placeholder="Enter your license number"
-                    value={formData.licenseNumber}
-                    onChange={handleChange}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="insuranceInfo">Insurance Information</Label>
-                  <Input
-                    id="insuranceInfo"
-                    name="insuranceInfo"
-                    type="text"
-                    required
-                    className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                    placeholder="Enter your insurance information"
-                    value={formData.insuranceInfo}
-                    onChange={handleChange}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="phoneNumber">Phone Number</Label>
-                  <Input
-                    id="phoneNumber"
-                    name="phoneNumber"
-                    type="tel"
-                    required
-                    className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                    placeholder="Enter your phone number"
-                    value={formData.phoneNumber}
-                    onChange={handleChange}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="address">Address</Label>
-                  <Input
-                    id="address"
-                    name="address"
-                    type="text"
-                    required
-                    className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                    placeholder="Enter your address"
-                    value={formData.address}
-                    onChange={handleChange}
-                  />
-                </div>
-              </>
-            )}
-          </div>
+          {role === 'professional' && (
+            <>
+              <div>
+                <Label htmlFor="businessName">Business Name</Label>
+                <Input
+                  id="businessName"
+                  name="businessName"
+                  type="text"
+                  required
+                  className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                  placeholder="Enter your business name"
+                  value={formData.businessName}
+                  onChange={handleChange}
+                />
+              </div>
+              <div>
+                <Label htmlFor="businessLicense">Business License</Label>
+                <Input
+                  id="businessLicense"
+                  name="businessLicense"
+                  type="text"
+                  required
+                  className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                  placeholder="Enter your business license number"
+                  value={formData.businessLicense}
+                  onChange={handleChange}
+                />
+              </div>
+              <div>
+                <Label htmlFor="yearsOfExperience">Years of Experience</Label>
+                <Input
+                  id="yearsOfExperience"
+                  name="yearsOfExperience"
+                  type="number"
+                  required
+                  className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                  placeholder="Enter years of experience"
+                  value={formData.yearsOfExperience}
+                  onChange={handleChange}
+                />
+              </div>
+              <div>
+                <Label htmlFor="licenseNumber">License Number</Label>
+                <Input
+                  id="licenseNumber"
+                  name="licenseNumber"
+                  type="text"
+                  required
+                  className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                  placeholder="Enter your license number"
+                  value={formData.licenseNumber}
+                  onChange={handleChange}
+                />
+              </div>
+              <div>
+                <Label htmlFor="insuranceInfo">Insurance Information</Label>
+                <Input
+                  id="insuranceInfo"
+                  name="insuranceInfo"
+                  type="text"
+                  required
+                  className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                  placeholder="Enter your insurance information"
+                  value={formData.insuranceInfo}
+                  onChange={handleChange}
+                />
+              </div>
+              <div>
+                <Label htmlFor="phoneNumber">Phone Number</Label>
+                <Input
+                  id="phoneNumber"
+                  name="phoneNumber"
+                  type="tel"
+                  required
+                  className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                  placeholder="Enter your phone number"
+                  value={formData.phoneNumber}
+                  onChange={handleChange}
+                />
+              </div>
+              <div>
+                <Label htmlFor="address">Address</Label>
+                <Input
+                  id="address"
+                  name="address"
+                  type="text"
+                  required
+                  className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                  placeholder="Enter your address"
+                  value={formData.address}
+                  onChange={handleChange}
+                />
+              </div>
+            </>
+          )}
 
           <div className="flex items-center justify-between">
             <div className="flex items-center">
