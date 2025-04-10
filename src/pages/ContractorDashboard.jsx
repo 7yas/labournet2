@@ -166,8 +166,19 @@ const ContractorDashboard = () => {
   const fetchProjects = async () => {
     try {
       setLoading(true);
-      const response = await getProjects();
-      setProjects(response.data);
+      const response = await axios.get('http://localhost:5000/api/projects', {
+        headers: {
+          Authorization: `Bearer ${token}`
+        },
+        params: {
+          populate: 'postedBy'
+        }
+      });
+      const projectsWithBuilder = response.data.map(project => ({
+        ...project,
+        builderName: project.postedBy?.fullName || project.postedBy?.businessName || '-'
+      }));
+      setProjects(projectsWithBuilder);
     } catch (error) {
       console.error('Error fetching projects:', error);
       setError('Failed to fetch projects');
@@ -294,8 +305,8 @@ const ContractorDashboard = () => {
                       <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                       <circle cx="12" cy="7" r="4"></circle>
                     </svg>
-                    Posted by: {project.postedBy?.businessName || '-'}
-                </p>
+                    Posted by: {project.builderName}
+                  </p>
                 <div className="flex justify-between items-center">
                     <span className="text-[#FF4B55] font-bold">
                       ${project.hourlyRate?.min}-{project.hourlyRate?.max}/hr

@@ -25,12 +25,19 @@ const ContractorNavbar = () => {
     const fetchContractorDetails = async () => {
       try {
         const userData = JSON.parse(localStorage.getItem('userData'));
-        if (!userData?._id) {
-          console.log('No contractor ID found in userData');
+        const token = localStorage.getItem('authToken');
+        
+        if (!userData?._id || !token) {
+          console.log('No contractor ID or token found');
           return;
         }
 
-        const response = await fetch(`http://localhost:5000/api/profiles/contractor/${userData._id}`);
+        const response = await fetch(`http://localhost:5000/api/profiles/contractor/${userData._id}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
         if (!response.ok) {
           throw new Error('Failed to fetch contractor details');
         }

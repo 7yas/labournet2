@@ -67,7 +67,7 @@ const projectSchema = new mongoose.Schema({
   postedByRole: {
     type: String,
     required: true,
-    enum: ['builder', 'contractor', 'worker']
+    enum: ['builder', 'contractor', 'worker', 'Builder', 'Contractor', 'Worker']
   }
 }, {
   timestamps: true
