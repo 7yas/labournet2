@@ -124,7 +124,7 @@ router.post('/signup', async (req, res) => {
       });
     } else if (role === 'worker') {
       // Validate worker specific fields
-      const workerFields = ['yearsOfExperience', 'skills', 'certifications', 'phoneNumber', 'hourlyRate', 'availability', 'description', 'address'];
+      const workerFields = ['phoneNumber', 'hourlyRate', 'address'];
       const missingWorkerFields = workerFields.filter(field => !profileData[field]);
       
       if (missingWorkerFields.length > 0) {
@@ -134,29 +134,11 @@ router.post('/signup', async (req, res) => {
         });
       }
 
-      // Convert skills and certifications to arrays if they're strings
-      const skills = typeof profileData.skills === 'string' 
-        ? profileData.skills.split(',').map(s => s.trim()).filter(s => s)
-        : Array.isArray(profileData.skills) 
-          ? profileData.skills.map(s => s.trim()).filter(s => s)
-          : [];
-
-      const certifications = typeof profileData.certifications === 'string'
-        ? profileData.certifications.split(',').map(c => c.trim()).filter(c => c)
-        : Array.isArray(profileData.certifications)
-          ? profileData.certifications.map(c => c.trim()).filter(c => c)
-          : [];
-
       newProfile = new Worker({
         email,
         password,
         fullName,
-        yearsOfExperience: profileData.yearsOfExperience,
-        skills,
-        certifications,
         hourlyRate: profileData.hourlyRate,
-        availability: profileData.availability,
-        description: profileData.description,
         phoneNumber: profileData.phoneNumber,
         address: profileData.address
       });

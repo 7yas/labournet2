@@ -37,6 +37,7 @@ import EditWorkerProfile from "./pages/EditWorkerProfile";
 import EditProfessionalProfile from "./pages/EditProfessionalProfile";
 import EditContractorProfile from "./pages/EditContractorProfile";
 import PostProjectForm from './components/PostProjectForm';
+import WorkerApplications from './pages/WorkerApplications';
 
 const queryClient = new QueryClient();
 
@@ -92,6 +93,7 @@ const App = () => (
                       </ProtectedRoute>
                     }
                   />
+                  <Route path="/worker-applications" element={<WorkerApplications />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </BrowserRouter>

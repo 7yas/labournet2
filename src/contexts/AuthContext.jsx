@@ -7,21 +7,25 @@ export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check localStorage for user data on mount
+    // Check localStorage for user data and token on mount
     const userData = localStorage.getItem('userData');
-    const token = localStorage.getItem('authToken');
-    
-    if (userData && token) {
+    const storedToken = localStorage.getItem('authToken');
+
+    if (userData && storedToken) {
       try {
         const parsedUser = JSON.parse(userData);
         setUser(parsedUser);
+        setToken(storedToken);
       } catch (error) {
-        console.error('Error parsing user data:', error);
+        console.error('Error parsing user data or setting token:', error);
         localStorage.removeItem('userData');
         localStorage.removeItem('authToken');
+        setUser(null);
+        setToken(null);
       }
     }
     setLoading(false);
@@ -36,13 +40,14 @@ export const AuthProvider = ({ children }) => {
         role
       });
 
-      const { user: userData, token } = response.data;
+      const { user: userData, token: newToken } = response.data;
 
       // Store both user data and token
       localStorage.setItem('userData', JSON.stringify(userData));
-      localStorage.setItem('authToken', token);
+      localStorage.setItem('authToken', newToken);
 
       setUser(userData);
+      setToken(newToken);
       return userData;
     } catch (error) {
       console.error('Login error:', error);
@@ -56,11 +61,12 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('userData');
     localStorage.removeItem('authToken');
     setUser(null);
-    window.location.href = '/login';
+    setToken(null);
   };
 
   const value = {
     user,
+    token,
     loading,
     login,
     logout

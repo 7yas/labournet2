@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const projectSchema = new mongoose.Schema({
+const contractorJobPostSchema = new mongoose.Schema({
   title: {
     type: String,
     required: true,
@@ -50,29 +50,20 @@ const projectSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
-  postedDate: {
-    type: Date,
-    default: Date.now
-  },
-  status: {
-    type: String,
-    default: 'active',
-    enum: ['active', 'completed', 'cancelled']
-  },
   postedBy: {
     type: mongoose.Schema.Types.ObjectId,
     required: true,
     ref: 'Contractor'
   },
-  postedByRole: {
+  status: {
     type: String,
-    required: true,
-    enum: ['builder', 'contractor', 'worker']
+    default: 'active',
+    enum: ['active', 'completed', 'cancelled']
   }
 }, {
   timestamps: true
 });
 
-const Project = mongoose.model('Project', projectSchema);
+const ContractorJobPost = mongoose.model('ContractorJobPost', contractorJobPostSchema);
 
-module.exports = Project; 
+module.exports = ContractorJobPost; 

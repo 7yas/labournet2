@@ -11,6 +11,7 @@ import { Button } from "../components/ui/button";
 import { CheckIcon, XIcon, MapPinIcon, CalendarIcon, ClockIcon, BriefcaseIcon, PhoneIcon } from "lucide-react";
 import { useToast } from "../hooks/use-toast";
 import { api } from "../services/api";
+import axios from "axios";
 
 const WorkerDashboard = () => {
   const navigate = useNavigate();
@@ -26,19 +27,79 @@ const WorkerDashboard = () => {
   const [activeJobs, setActiveJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [contractorDetails, setContractorDetails] = useState(null);
+  const [workerDetails, setWorkerDetails] = useState(null);
+  const [showProfileDialog, setShowProfileDialog] = useState(false);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
 
   // Fetch projects posted by contractors
   useEffect(() => {
     const fetchProjects = async () => {
       try {
         setLoading(true);
-        // Fetch only projects posted by contractors
-        const response = await api.getProjects();
-        // Filter projects to only show those posted by contractors
-        const contractorProjects = response.data.filter(project => 
-          project.contractorDetails && project.contractorDetails._id
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+          throw new Error('No authentication token found');
+        }
+
+        // Fetch jobs from contractorjobpost collection
+        const response = await fetch('http://localhost:5000/api/contractor-job-posts', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch jobs');
+        }
+
+        const data = await response.json();
+        
+        // Fetch contractor details for each job
+        const projectsWithContractorDetails = await Promise.all(
+          data.map(async (project) => {
+            try {
+              // Get the contractor ID correctly
+              const contractorId = project.postedBy?._id || project.postedBy;
+              if (!contractorId) {
+                console.error('No contractor ID found for project:', project._id);
+                return project;
+              }
+
+              const contractorResponse = await fetch(`http://localhost:5000/api/profiles/contractor/${contractorId}`, {
+                headers: {
+                  'Authorization': `Bearer ${token}`
+                }
+              });
+
+              if (contractorResponse.ok) {
+                const contractorData = await contractorResponse.json();
+                return {
+                  ...project,
+                  contractorDetails: {
+                    businessName: contractorData.businessName,
+                    phoneNumber: contractorData.phoneNumber,
+                    email: contractorData.email,
+                    businessType: contractorData.businessType,
+                    yearsOfExperience: contractorData.yearsOfExperience,
+                    licenseNumber: contractorData.licenseNumber,
+                    insuranceInfo: contractorData.insuranceInfo,
+                    projectTypes: contractorData.projectTypes
+                  }
+                };
+              }
+              console.error('Failed to fetch contractor details for project:', project._id);
+              return project;
+            } catch (error) {
+              console.error('Error fetching contractor details:', error);
+              return project;
+            }
+          })
         );
-        setProjects(contractorProjects);
+
+        setProjects(projectsWithContractorDetails);
       } catch (error) {
         console.error('Error fetching projects:', error);
         toast({
@@ -62,12 +123,40 @@ const WorkerDashboard = () => {
     }
   }, []);
 
+  // Fetch worker details
+  useEffect(() => {
+    const fetchWorkerDetails = async () => {
+      try {
+        const userData = JSON.parse(localStorage.getItem('userData'));
+        if (userData && userData._id) {
+          const response = await api.get(`/users/worker/${userData._id}`);
+          setWorkerDetails(response.data);
+        }
+      } catch (error) {
+        console.error('Error fetching worker details:', error);
+      }
+    };
+
+    fetchWorkerDetails();
+  }, []);
+
   const handleAccept = async (project) => {
     try {
-      // No need to fetch contractor details separately as they're already populated
-      setContractorDetails(project.contractorDetails);
+      // Fetch contractor details using the correct ID
+      const contractorId = project.postedBy?._id || project.postedBy;
+      if (!contractorId) {
+        throw new Error('No contractor ID found');
+      }
+
+      const response = await fetch(`http://localhost:5000/api/profiles/contractor/${contractorId}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch contractor details');
+      }
+
+      const contractorData = await response.json();
+      setContractorDetails(contractorData);
       setSelectedJob(project);
-    setShowAcceptDialog(true);
+      setShowAcceptDialog(true);
     } catch (error) {
       console.error('Error preparing job application:', error);
       toast({
@@ -81,51 +170,96 @@ const WorkerDashboard = () => {
   const confirmAccept = async () => {
     if (selectedJob && contractorDetails) {
       try {
-        // Apply to the project
-        await api.applyToProject({
-          project: selectedJob._id,
-          worker: mockUserId,
-          status: 'pending',
-          coverLetter: "I am interested in working on this project",
-          expectedRate: selectedJob.hourlyRate.min,
-          contractorDetails: {
-            businessName: contractorDetails.businessName,
-            businessType: contractorDetails.businessType,
-            yearsOfExperience: contractorDetails.yearsOfExperience,
-            licenseNumber: contractorDetails.licenseNumber,
-            insuranceInfo: contractorDetails.insuranceInfo,
-            projectTypes: contractorDetails.projectTypes,
-            phoneNumber: contractorDetails.phoneNumber
-          }
-        });
+        // Get the token and ensure it's properly formatted
+        const token = localStorage.getItem('authToken');
+        console.log('Token from localStorage:', token); // Debug log
 
-        // Add job to active jobs with contractor details
-        const updatedActiveJobs = [...activeJobs, {
-          ...selectedJob,
-          accepted: true,
-          contractor: contractorDetails
-        }];
-      setActiveJobs(updatedActiveJobs);
-      
-      // Save to localStorage
-      localStorage.setItem('activeJobs', JSON.stringify(updatedActiveJobs));
-      
-      // Remove the job from available jobs
-        setProjects(projects.filter(p => p._id !== selectedJob._id));
-      
-      setShowAcceptDialog(false);
-      
-      toast({
-        title: "Job Accepted",
-          description: "Your application has been submitted successfully.",
-        });
+        if (!token) {
+          throw new Error('No authentication token found. Please log in again.');
+        }
+
+        // Get user data
+        const userData = JSON.parse(localStorage.getItem('userData'));
+        console.log('User data from localStorage:', userData); // Debug log
+
+        if (!userData) {
+          throw new Error('No user data found. Please log in again.');
+        }
+
+        // Create application data
+        const applicationData = {
+          worker: userData._id,
+          project: selectedJob._id,
+          contractor: selectedJob.postedBy._id,
+          status: 'pending',
+          coverLetter: 'I am interested in this position and would like to apply.',
+          expectedRate: selectedJob.hourlyRate?.min || userData.hourlyRate
+        };
+
+        console.log('Submitting application with data:', applicationData);
+
+        // Submit application
+        const response = await axios.post(
+          'http://localhost:5000/api/applications',
+          applicationData,
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+
+        if (response.status === 201) {
+          // Add job to active jobs with contractor details
+          const updatedActiveJobs = [...activeJobs, {
+            ...selectedJob,
+            accepted: true,
+            contractor: contractorDetails
+          }];
+          setActiveJobs(updatedActiveJobs);
+          
+          // Save to localStorage
+          localStorage.setItem('activeJobs', JSON.stringify(updatedActiveJobs));
+          
+          // Remove the job from available jobs
+          setProjects(projects.filter(p => p._id !== selectedJob._id));
+          
+          setShowAcceptDialog(false);
+          
+          toast({
+            title: "Application Submitted",
+            description: "Your application has been submitted successfully.",
+          });
+        } else {
+          throw new Error('Failed to submit application');
+        }
       } catch (error) {
         console.error('Error applying to project:', error);
-        toast({
-          title: "Error",
-          description: "Failed to apply for the job. Please try again.",
-          variant: "destructive",
-        });
+        console.error('Error response:', error.response?.data);
+        
+        // Handle specific error cases
+        if (error.response?.status === 401) {
+          toast({
+            title: "Authentication Error",
+            description: "Your session has expired. Please log in again.",
+            variant: "destructive",
+          });
+          // Optionally redirect to login page
+          // navigate('/login');
+        } else if (error.response?.status === 400) {
+          toast({
+            title: "Validation Error",
+            description: error.response.data.message || "Please check your application details and try again.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Error",
+            description: error.response?.data?.message || error.message || "Failed to submit application. Please try again.",
+            variant: "destructive",
+          });
+        }
       }
     }
   };
@@ -148,6 +282,65 @@ const WorkerDashboard = () => {
 
   const handleViewJobDetail = (projectId) => {
     navigate(`/job-detail/${projectId}`);
+  };
+
+  const handleApply = async (projectId) => {
+    try {
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      const workerData = JSON.parse(localStorage.getItem('userData'));
+      if (!workerData) {
+        throw new Error('Worker data not found');
+      }
+
+      const applicationData = {
+        project: projectId,
+        worker: workerData._id,
+        status: 'pending',
+        applicationDate: new Date(),
+        skills: workerData.skills || [],
+        experience: workerData.experience || '',
+        availability: workerData.availability || 'Full-time'
+      };
+
+      const response = await axios.post(
+        'http://localhost:5000/api/worker-applications',
+        applicationData,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (response.status === 201) {
+        toast({
+          title: "Success",
+          description: "Application submitted successfully!",
+          variant: "default",
+        });
+        
+        // Update the project list to reflect the application
+        setProjects(prevProjects => 
+          prevProjects.map(project => 
+            project._id === projectId 
+              ? { ...project, hasApplied: true }
+              : project
+          )
+        );
+      }
+    } catch (error) {
+      console.error('Error applying for job:', error);
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to submit application. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   if (loading) {
@@ -175,15 +368,54 @@ const WorkerDashboard = () => {
               {activeJobs.length}
             </div>
           </div>
-          <div className="flex items-center gap-2 cursor-pointer">
+          <div 
+            className="flex items-center gap-2 cursor-pointer"
+            onClick={() => setShowProfileDialog(true)}
+          >
             <div className="w-8 h-8 rounded-full bg-gray-300"></div>
-            <span>Test Worker</span>
+            <span>{workerDetails?.fullName || 'Loading...'}</span>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M6 9L12 15L18 9" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </div>
         </div>
       </header>
+
+      {/* Profile Dialog */}
+      <Dialog open={showProfileDialog} onOpenChange={setShowProfileDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Worker Profile</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="flex items-center gap-4">
+              <div className="w-20 h-20 rounded-full bg-gray-300"></div>
+              <div>
+                <h3 className="text-xl font-semibold">{workerDetails?.fullName || 'Worker'}</h3>
+                <p className="text-gray-500">{workerDetails?.email || 'No email provided'}</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <h4 className="text-sm font-medium text-gray-500">Phone Number</h4>
+                <p>{workerDetails?.phoneNumber || 'No phone number provided'}</p>
+              </div>
+              <div>
+                <h4 className="text-sm font-medium text-gray-500">Address</h4>
+                <p>{workerDetails?.address || 'No address provided'}</p>
+              </div>
+              <div>
+                <h4 className="text-sm font-medium text-gray-500">Hourly Rate</h4>
+                <p>₹{workerDetails?.hourlyRate || '0'}/hr</p>
+              </div>
+              <div>
+                <h4 className="text-sm font-medium text-gray-500">Skills</h4>
+                <p>{workerDetails?.skills?.join(', ') || 'No skills listed'}</p>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Main Content */}
       <main className="container mx-auto py-8 px-4">
@@ -214,12 +446,15 @@ const WorkerDashboard = () => {
                         <span>{project.employmentType}</span>
                       </div>
                       <div className="flex items-center text-gray-500 text-sm mt-1">
-                        <BriefcaseIcon className="w-4 h-4 mr-1" />
-                        <span>Posted by: {project.contractorDetails?.businessName}</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-briefcase w-4 h-4 mr-1">
+                          <path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+                          <rect width="20" height="14" x="2" y="6" rx="2"></rect>
+                        </svg>
+                        <span>Posted by: {project.contractorDetails?.businessName || 'Contractor'} ({project.contractorDetails?.phoneNumber || 'No phone'})</span>
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-lg font-semibold">₹{project.hourlyRate.min}/hr</div>
+                      <div className="text-lg font-semibold">₹{project.hourlyRate}/hr</div>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3 mt-4">
@@ -270,17 +505,52 @@ const WorkerDashboard = () => {
                 </div>
                 <div className="space-y-4">
                   {projects.slice(0, 3).map(project => (
-                    <div key={project._id} className="border-b pb-4">
-                      <div className="flex justify-between items-start">
+                    <div key={project._id} className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
+                      <div className="flex justify-between items-start mb-2">
                         <div>
-                          <h3 className="font-semibold">{project.title}</h3>
-                          <p className="text-gray-500 text-sm">{project.location}</p>
+                          <h3 className="font-semibold text-lg">{project.title}</h3>
+                          <div className="flex items-center text-gray-500 text-sm mt-1">
+                            <MapPinIcon className="w-4 h-4 mr-1" />
+                            <span>{project.location}</span>
+                          </div>
+                          <div className="flex items-center text-gray-500 text-sm mt-1">
+                            <BriefcaseIcon className="w-4 h-4 mr-1" />
+                            <span>{project.projectType}</span>
+                          </div>
+                          <div className="flex items-center text-gray-500 text-sm mt-1">
+                            <CalendarIcon className="w-4 h-4 mr-1" />
+                            <span>{project.timeline}</span>
+                          </div>
+                          <div className="flex items-center text-gray-500 text-sm mt-1">
+                            <PhoneIcon className="w-4 h-4 mr-1" />
+                            <span>Contact: {project.contractorDetails?.phoneNumber || 'Not provided'}</span>
+                          </div>
+                          <div className="flex items-center text-gray-500 text-sm mt-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-briefcase w-4 h-4 mr-1">
+                              <path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+                              <rect width="20" height="14" x="2" y="6" rx="2"></rect>
+                            </svg>
+                            <span>Posted by: {project.contractorDetails?.businessName || 'Contractor'} ({project.contractorDetails?.phoneNumber || 'No phone'})</span>
+                          </div>
                         </div>
-                        <span className="text-[#004A57] font-semibold">₹{project.hourlyRate.min}/hr</span>
+                        <div className="text-right">
+                          <div className="text-lg font-semibold">₹{project.hourlyRate}/hr</div>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2 mt-2">
-                        <span className="text-sm bg-gray-100 px-2 py-1 rounded">{project.projectType}</span>
-                        <span className="text-sm bg-gray-100 px-2 py-1 rounded">{project.employmentType}</span>
+                      <div className="grid grid-cols-2 gap-3 mt-4">
+                        <Button 
+                          className="flex items-center justify-center" 
+                          onClick={() => handleAccept(project)}
+                          variant="primary"
+                        >
+                          <CheckIcon className="w-4 h-4 mr-1" /> Apply Now
+                        </Button>
+                        <Button 
+                          className="flex items-center justify-center bg-[#5D8AA8] hover:bg-[#4A7A96] text-white" 
+                          onClick={() => handleReject(project._id)}
+                        >
+                          <XIcon className="w-4 h-4 mr-1" /> Reject
+                        </Button>
                       </div>
                     </div>
                   ))}

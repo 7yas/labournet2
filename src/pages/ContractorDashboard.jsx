@@ -10,16 +10,19 @@ import { motion } from 'framer-motion';
 import Footer from '../components/layout/Footer';
 import { Briefcase, Calendar, MapPin, Clock } from 'lucide-react';
 import ContractorNavbar from '../components/layout/ContractorNavbar';
+import axios from 'axios';
 
 const ContractorDashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const [isPostJobDialogOpen, setPostJobDialogOpen] = useState(false);
   const [isContactDialogOpen, setContactDialogOpen] = useState(false);
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [applications, setApplications] = useState([]);
+  const [showApplications, setShowApplications] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     projectType: 'Commercial',
@@ -33,30 +36,12 @@ const ContractorDashboard = () => {
   const [activeFilter, setActiveFilter] = useState("All Projects");
 
   useEffect(() => {
-    const fetchProjects = async () => {
-      try {
-        setLoading(true);
-        const response = await getProjects();
-        setProjects(response.data);
-      } catch (error) {
-        console.error('Error fetching projects:', error);
-        setError('Failed to fetch projects');
-        if (error.response?.status === 401) {
-          navigate('/login?role=contractor');
-        } else {
-          toast({
-            title: "Error",
-            description: "Failed to fetch projects. Please try again later.",
-            variant: "destructive",
-          });
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
+    if (!user || !token) {
+      navigate('/login?role=contractor');
+      return;
+    }
     fetchProjects();
-  }, [navigate, toast]);
+  }, [user, token, navigate]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -68,53 +53,48 @@ const ContractorDashboard = () => {
 
   const handleSubmit = async (formData) => {
     try {
-      // Create project data with the current user's ID
-      const projectData = {
-        ...formData,
+      const jobPostData = {
+        title: formData.title,
+        location: formData.location,
+        employmentType: formData.employmentType || 'Full-time',
+        hourlyRate: formData.hourlyRate,
+        jobDescription: formData.description,
+        requirements: formData.requirements || '',
+        company: user.businessName || 'Your Company',
+        projectType: formData.projectType,
+        timeline: formData.timeline || '3 months',
+        expiresAfter: '30 days',
         status: 'active',
-        contractor: user._id,
-        employmentType: 'Contract',
-        timeline: {
-          startDate: formData.startDate,
-          endDate: formData.endDate
-        },
-        hourlyRate: {
-          min: parseInt(formData.hourlyRate.split('-')[0]),
-          max: parseInt(formData.hourlyRate.split('-')[1])
-        }
+        postedBy: user._id
       };
 
-      // Create the project
-      await createProject(projectData);
-      
-      // Close the dialog
-      setPostJobDialogOpen(false);
-      
-      // Reset form data
-      setFormData({
-        title: '',
-        projectType: 'Commercial',
-        location: '',
-        timeline: '',
-        hourlyRate: '',
-        description: ''
+      const response = await fetch('http://localhost:5000/api/contractor-job-posts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(jobPostData)
       });
-      
-      // Refresh the projects list
-      const response = await getProjects();
-      setProjects(response.data);
-      
-      // Show success message
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to post job');
+      }
+
       toast({
-        title: "Success",
-        description: "Project posted successfully",
+        title: 'Success',
+        description: 'Job posted successfully',
       });
+
+      closePostJobDialog();
+      fetchProjects();
     } catch (error) {
-      console.error('Error creating project:', error);
+      console.error('Error posting job:', error);
       toast({
-        title: "Error",
-        description: error.response?.data?.message || "Failed to post project",
-        variant: "destructive",
+        title: 'Error',
+        description: error.message || 'Failed to post job',
+        variant: 'destructive',
       });
     }
   };
@@ -183,89 +163,98 @@ const ContractorDashboard = () => {
   const openContactDialog = () => setContactDialogOpen(true);
   const closeContactDialog = () => setContactDialogOpen(false);
 
+  const fetchProjects = async () => {
+    try {
+      setLoading(true);
+      const response = await getProjects();
+      setProjects(response.data);
+    } catch (error) {
+      console.error('Error fetching projects:', error);
+      setError('Failed to fetch projects');
+      if (error.response?.status === 401) {
+        navigate('/login?role=contractor');
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to fetch projects. Please try again later.",
+          variant: "destructive",
+        });
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchApplications = async () => {
+    try {
+      const response = await axios.get(
+        `http://localhost:5000/api/worker-applications/contractor/${user._id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+      setApplications(response.data);
+      setShowApplications(true);
+    } catch (err) {
+      setError('Failed to fetch applications');
+    }
+  };
+
+  const handleApplicationStatus = async (applicationId, status) => {
+    try {
+      const response = await axios.patch(
+        `http://localhost:5000/api/worker-applications/${applicationId}`,
+        { status },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+      
+      // Update the applications list
+      setApplications(applications.map(app => 
+        app._id === applicationId ? response.data : app
+      ));
+    } catch (err) {
+      setError('Failed to update application status');
+    }
+  };
+
   if (loading) return <div>Loading...</div>;
   if (error) return <div>Error: {error}</div>;
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Header */}
-      <header className="bg-[#004A57] text-white p-4 flex justify-between items-center">
-        <div className="flex items-center gap-4">
-          <a href="/" className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-[#FF4B55] transform rotate-45" />
-            <span className="text-[#EEE] text-xl font-medium">LabourNet</span>
-          </a>
-          <nav className="hidden md:flex space-x-6 ml-12">
-            <a href="/contractor-dashboard" className="hover:text-[#FF4B55]">Dashboard</a>
-            <a href="/contractor-job-posting" className="hover:text-[#FF4B55]">Jobs</a>
-            <a href="/workers" className="hover:text-[#FF4B55]">Workers</a>
-            <a href="/analytics" className="hover:text-[#FF4B55]">Analytics</a>
-          </nav>
-        </div>
-        <div className="flex items-center gap-4">
-          <div>
-            <button
-              className="flex items-center gap-2 transition-transform hover:scale-105 bg-[#FF4B55] text-white px-4 py-2 rounded-md"
-              onClick={openPostJobDialog}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M5 12h14m-7-7v14"></path>
-              </svg>
-              Post Job
-            </button>
-            {isPostJobDialogOpen && (
-              <dialog className="max-w-4xl w-full max-h-[90vh] overflow-y-auto p-0 rounded-lg" open>
-                <div className="sticky top-0 flex justify-between items-center bg-white p-4 border-b z-10">
-                    <h2 className="text-lg font-semibold">Post a New Project</h2>
-                          <button
-                            onClick={closePostJobDialog}
-                    className="text-gray-500 hover:text-gray-700"
-                          >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="18" y1="6" x2="6" y2="18"></line>
-                      <line x1="6" y1="6" x2="18" y2="18"></line>
-                    </svg>
-                          </button>
-                </div>
-                <PostJobForm onSubmit={handleSubmit} />
-              </dialog>
-            )}
-          </div>
-          <a href="/company-profile">
-            <div className="w-8 h-8 rounded-full bg-gray-300 cursor-pointer hover:ring-2 hover:ring-[#FF4B55] transition-all duration-300"></div>
-          </a>
-        </div>
-      </header>
-
-      {/* Hero Banner */}
-      <div className="bg-[#004A57] text-white py-10 px-4">
-        <div className="container mx-auto max-w-5xl">
-          <h1 className="text-2xl md:text-3xl font-bold mb-2">Find Construction Jobs & Workers</h1>
-          <p className="text-[#EEE] mb-6">Connect with top builders and manage your workforce efficiently.<br />
-          Access high-value construction jobs and skilled laborers.</p>
-          
-          <div className="flex flex-col md:flex-row gap-4 mt-8">
-            <div className="flex-grow relative">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-                <circle cx="11" cy="11" r="8"></circle>
-                <path d="m21 21-4.3-4.3"></path>
-              </svg>
-              <input 
-                type="text" 
-                placeholder="Search for workers or jobs..." 
-                className="w-full p-3 pl-10 border border-gray-300 rounded-lg hover:border-[#FF4B55] focus:border-[#FF4B55] focus:outline-none transition-colors"
-                id="searchQuery"
-              />
-            </div>
-            <button className="bg-[#FF4B55] text-white px-4 py-2 rounded-md md:w-auto">
-              Search
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Content */}
+      <ContractorNavbar />
+      
       <main className="container mx-auto py-8 px-4 max-w-5xl">
+        {/* Post Job Button */}
+        <div className="flex justify-end mb-6">
+            <button
+              onClick={openPostJobDialog}
+            className="bg-[#FF4B55] text-white px-4 py-2 rounded-lg hover:bg-[#e03e48] transition-colors"
+          >
+                            Post Job
+                          </button>
+        </div>
+
+        {/* Post Job Dialog */}
+        <Dialog open={isPostJobDialogOpen} onOpenChange={setPostJobDialogOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogTitle>Post a New Job</DialogTitle>
+            <DialogDescription>
+              Fill out the form below to post a new job opportunity.
+            </DialogDescription>
+            <PostJobForm 
+              onSubmit={handleSubmit}
+              onClose={closePostJobDialog}
+            />
+          </DialogContent>
+        </Dialog>
+
         {/* Available Projects Section */}
         <div className="mb-12">
           <h2 className="text-xl font-semibold text-[#121224] mb-6">Available projects</h2>
@@ -327,111 +316,67 @@ const ContractorDashboard = () => {
           </div>
         </div>
 
-        {/* Popular Categories */}
-        <div className="mb-12">
-          <h2 className="text-xl font-semibold text-[#121224] mb-6">Popular Categories</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-white border border-gray-200 rounded-lg p-4 text-center hover:border-[#FF4B55] transition-colors cursor-pointer">
-              <h3 className="font-semibold">Commercial</h3>
-            </div>
-            <div className="bg-white border border-gray-200 rounded-lg p-4 text-center hover:border-[#FF4B55] transition-colors cursor-pointer">
-              <h3 className="font-semibold">Residential</h3>
-            </div>
-            <div className="bg-white border border-gray-200 rounded-lg p-4 text-center hover:border-[#FF4B55] transition-colors cursor-pointer">
-              <h3 className="font-semibold">Industrial</h3>
-            </div>
-            <div className="bg-white border border-gray-200 rounded-lg p-4 text-center hover:border-[#FF4B55] transition-colors cursor-pointer">
-              <h3 className="font-semibold">Infrastructure</h3>
-            </div>
-          </div>
-        </div>
-
-        {/* Footer Content */}
-        <div className="mt-12 grid grid-cols-1 md:grid-cols-4 gap-8 text-sm border-t border-gray-200 pt-8">
-          <div>
-            <h3 className="font-semibold mb-4">About LabourNet</h3>
-            <p className="text-gray-600">Connecting quality workers with great construction jobs across the nation.</p>
-          </div>
-          <div>
-            <h3 className="font-semibold mb-4">Quick Links</h3>
-            <ul className="space-y-2 text-gray-600">
-              <li><a href="/contractor-job-posting" className="hover:text-[#FF4B55]">Find Jobs</a></li>
-              <li>
-                <span 
-                  className="hover:text-[#FF4B55] cursor-pointer"
-                  onClick={openPostJobDialog}
-                >Post a Job</span>
-              </li>
-              <li><a href="/workers" className="hover:text-[#FF4B55]">Our Services</a></li>
-              <li><a href="/company-profile" className="hover:text-[#FF4B55]">For Employers</a></li>
-            </ul>
-          </div>
-          <div>
-            <h3 className="font-semibold mb-4">Resources</h3>
-            <ul className="space-y-2 text-gray-600">
-              <li><a href="#" className="hover:text-[#FF4B55]">Help Center</a></li>
-              <li><a href="#" className="hover:text-[#FF4B55]">Training Programs</a></li>
-              <li><a href="#" className="hover:text-[#FF4B55]">Career Resources</a></li>
-              <li><a href="#" className="hover:text-[#FF4B55]">Safety Guidelines</a></li>
-            </ul>
-          </div>
-          <div>
-            <h3 className="font-semibold mb-4">Contact Us</h3>
-            <button
-              className="w-full mb-4 px-4 py-2 border rounded-md hover:border-[#FF4B55]"
-              onClick={openContactDialog}
-            >
-              Contact Us
-            </button>
-            {isContactDialogOpen && (
-              <dialog className="max-w-4xl p-6 rounded-lg" open>
-                <div>
-                  <div>
-                    <h2 className="text-lg font-semibold">Contact Us</h2>
-                    <p className="text-gray-500">Send us a message and we'll get back to you</p>
-                  </div>
-                  <div>
-                    <form className="mt-4">
-                      <div className="space-y-4">
-                        <div>
-                          <label className="block text-sm font-medium mb-1">Name</label>
-                          <input type="text" className="w-full p-2 border rounded" />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium mb-1">Email</label>
-                          <input type="email" className="w-full p-2 border rounded" />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium mb-1">Message</label>
-                          <textarea className="w-full p-2 border rounded h-32"></textarea>
-                        </div>
-                        <div>
-                          <button type="submit" className="bg-[#FF4B55] text-white px-4 py-2 rounded-md">
-                            Send Message
-                          </button>
-                          <button
-                            type="button"
-                            onClick={closeContactDialog}
-                            className="ml-2 px-4 py-2 border rounded-md"
-                          >
-                            Cancel
-                          </button>
-                        </div>
+        {showApplications ? (
+          <div className="bg-white rounded-lg shadow p-6 mt-12">
+            <h2 className="text-2xl font-semibold mb-4">Worker Applications</h2>
+            {applications.length === 0 ? (
+              <p className="text-gray-500">No applications found</p>
+            ) : (
+              <div className="space-y-4">
+                {applications.map((application) => (
+                  <div key={application._id} className="border rounded-lg p-4">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="font-semibold">{application.fullName}</h3>
+                        <p className="text-gray-600">{application.email}</p>
+                        <p className="text-gray-600">Project: {application.projectTitle}</p>
+                        <p className="text-gray-600">Skills: {application.skills.join(', ')}</p>
+                        <p className="text-gray-600">Hourly Rate: ${application.hourlyRate}</p>
                       </div>
-                    </form>
+                      <div className="flex space-x-2">
+                        {application.status === 'pending' && (
+                          <>
+                            <button
+                              onClick={() => handleApplicationStatus(application._id, 'accepted')}
+                              className="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600"
+                            >
+                              Accept
+                            </button>
+                            <button
+                              onClick={() => handleApplicationStatus(application._id, 'rejected')}
+                              className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
+                            >
+                              Reject
+                            </button>
+                          </>
+                        )}
+                        {application.status !== 'pending' && (
+                          <span className={`px-3 py-1 rounded ${
+                            application.status === 'accepted' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                          }`}>
+                            {application.status.charAt(0).toUpperCase() + application.status.slice(1)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </dialog>
+                ))}
+              </div>
             )}
-            <ul className="space-y-2 text-gray-600">
-              <li>123 Build St., Suite 700</li>
-              <li>San Francisco, CA 94103</li>
-              <li>(555) 123-4567</li>
-              <li>support@labournet.com</li>
-            </ul>
           </div>
-        </div>
+        ) : (
+          <div className="flex justify-end mt-6">
+            <button
+              onClick={fetchApplications}
+              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+            >
+              View Applications
+            </button>
+          </div>
+        )}
       </main>
+      
+      <Footer />
     </div>
   );
 };

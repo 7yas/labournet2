@@ -9,7 +9,7 @@ import { Label } from "../components/ui/label";
 import api from "../lib/api";
 
 const SignUpForm = ({
-  title,
+  title = role === 'professional' ? 'Professional Builder Sign Up' : 'Sign Up',
   emailLabel = "Email Address",
   emailPlaceholder = "your@email.com",
   showPasswordToggle = false,
@@ -41,12 +41,7 @@ const SignUpForm = ({
       address: '',
       teamSize: ''
     } : role === 'worker' ? {
-      yearsOfExperience: '',
-      skills: '',
-      certifications: '',
       hourlyRate: '',
-      availability: '',
-      description: '',
       phoneNumber: '',
       address: ''
     } : {
@@ -95,22 +90,16 @@ const SignUpForm = ({
       email,
         password,
       fullName,
-        role: serverRole,
-        ...formData
+        role: serverRole
       };
 
       // Format data based on role
       if (role === 'worker') {
         requestBody = {
           ...requestBody,
-          yearsOfExperience: Number(formData.yearsOfExperience),
-          hourlyRate: Number(formData.hourlyRate),
-          skills: formData.skills.split(',').map(skill => skill.trim()).filter(skill => skill),
-          certifications: formData.certifications.split(',').map(cert => cert.trim()).filter(cert => cert),
-          address: formData.address.trim(),
-          availability: formData.availability.trim(),
-          description: formData.description.trim(),
-          phoneNumber: formData.phoneNumber.trim()
+          hourlyRate: Number(formData.hourlyRate) || 0,
+          phoneNumber: formData.phoneNumber.trim(),
+          address: formData.address.trim()
         };
       } else if (role === 'professional') {
         requestBody = {
@@ -178,13 +167,58 @@ const SignUpForm = ({
     }, 1500);
   };
 
+  const renderWorkerForm = () => (
+    <>
+      <div className="mb-4">
+        <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="phoneNumber">
+          Phone Number
+        </label>
+        <input
+          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          id="phoneNumber"
+          name="phoneNumber"
+          type="tel"
+          placeholder="Phone Number"
+          value={formData.phoneNumber}
+          onChange={handleChange}
+        />
+      </div>
+      <div className="mb-4">
+        <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="address">
+          Address
+        </label>
+        <input
+          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          id="address"
+          name="address"
+          type="text"
+          placeholder="Address"
+          value={formData.address}
+          onChange={handleChange}
+        />
+      </div>
+      <div className="mb-4">
+        <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="hourlyRate">
+          Hourly Rate (₹)
+        </label>
+        <input
+          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          id="hourlyRate"
+          name="hourlyRate"
+          type="number"
+          placeholder="Enter your hourly rate"
+          value={formData.hourlyRate}
+          onChange={handleChange}
+        />
+      </div>
+    </>
+  );
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
       <div className="w-full max-w-md space-y-8">
         <div>
-          <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-gray-900">
-            {title}
-          </h2>
+          <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-gray-900">Professional Builder Sign Up</h2>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div>
@@ -393,222 +427,7 @@ const SignUpForm = ({
             </>
           )}
 
-          {role === 'worker' && (
-            <>
-              <div>
-                <Label htmlFor="yearsOfExperience">Years of Experience</Label>
-                <Input
-                  id="yearsOfExperience"
-                  name="yearsOfExperience"
-                  type="number"
-                  required
-                  className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                  placeholder="Enter years of experience"
-                  value={formData.yearsOfExperience}
-                  onChange={handleChange}
-                />
-              </div>
-              <div>
-                <Label htmlFor="skills">Skills</Label>
-                <Input
-                  id="skills"
-                  name="skills"
-                  type="text"
-                  required
-                  className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                  placeholder="Enter your skills (comma separated)"
-                  value={formData.skills}
-                  onChange={handleChange}
-                />
-              </div>
-              <div>
-                <Label htmlFor="certifications">Certifications</Label>
-                <Input
-                  id="certifications"
-                  name="certifications"
-                  type="text"
-                  required
-                  className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                  placeholder="Enter your certifications (comma separated)"
-                  value={formData.certifications}
-                  onChange={handleChange}
-                />
-              </div>
-              <div>
-                <Label htmlFor="hourlyRate">Hourly Rate</Label>
-                <Input
-                  id="hourlyRate"
-                  name="hourlyRate"
-                  type="number"
-                  required
-                  className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                  placeholder="Enter your hourly rate"
-                  value={formData.hourlyRate}
-                  onChange={handleChange}
-                />
-              </div>
-              <div>
-                <Label htmlFor="availability">Availability</Label>
-                <Input
-                  id="availability"
-                  name="availability"
-                  type="text"
-                  required
-                  className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                  placeholder="Enter your availability"
-                  value={formData.availability}
-                  onChange={handleChange}
-                />
-              </div>
-              <div>
-                <Label htmlFor="description">Description</Label>
-                <Input
-                  id="description"
-                  name="description"
-                  type="text"
-                  required
-                  className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                  placeholder="Enter a brief description about yourself"
-                  value={formData.description}
-                  onChange={handleChange}
-                />
-              </div>
-              <div>
-                <Label htmlFor="phoneNumber">Phone Number</Label>
-                <Input
-                  id="phoneNumber"
-                  name="phoneNumber"
-                  type="tel"
-                  required
-                  className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                  placeholder="Enter your phone number"
-                  value={formData.phoneNumber}
-                  onChange={handleChange}
-                />
-              </div>
-              <div>
-                <Label htmlFor="address">Address</Label>
-                <Input
-                  id="address"
-                  name="address"
-                  type="text"
-                  required
-                  className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                  placeholder="Enter your address"
-                  value={formData.address}
-                  onChange={handleChange}
-                />
-              </div>
-            </>
-          )}
-            {role === 'worker' && (
-              <>
-                <div>
-                  <Label htmlFor="yearsOfExperience">Years of Experience</Label>
-                  <Input
-                    id="yearsOfExperience"
-                    name="yearsOfExperience"
-                    type="number"
-                    required
-                    className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                    placeholder="Enter years of experience"
-                    value={formData.yearsOfExperience}
-                    onChange={handleChange}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="skills">Skills (comma-separated)</Label>
-                  <Input
-                    id="skills"
-                    name="skills"
-                    type="text"
-                    required
-                    className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                    placeholder="Enter your skills (e.g., Carpentry, Plumbing, Electrical)"
-                    value={formData.skills}
-                    onChange={handleChange}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="certifications">Certifications (comma-separated)</Label>
-                  <Input
-                    id="certifications"
-                    name="certifications"
-                    type="text"
-                    required
-                    className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                    placeholder="Enter your certifications (e.g., OSHA, First Aid)"
-                    value={formData.certifications}
-                    onChange={handleChange}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="hourlyRate">Hourly Rate (₹)</Label>
-                  <Input
-                    id="hourlyRate"
-                    name="hourlyRate"
-                    type="number"
-                    required
-                    className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                    placeholder="Enter your hourly rate"
-                    value={formData.hourlyRate}
-                    onChange={handleChange}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="availability">Availability</Label>
-                  <Input
-                    id="availability"
-                    name="availability"
-                    type="text"
-                    required
-                    className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                    placeholder="Enter your availability"
-                    value={formData.availability}
-                    onChange={handleChange}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="description">Description</Label>
-                  <Input
-                    id="description"
-                    name="description"
-                    type="text"
-                    required
-                    className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                    placeholder="Enter a brief description about yourself"
-                    value={formData.description}
-                    onChange={handleChange}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="phoneNumber">Phone Number</Label>
-                  <Input
-                    id="phoneNumber"
-                    name="phoneNumber"
-                    type="tel"
-                    required
-                    className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                    placeholder="Enter your phone number"
-                    value={formData.phoneNumber}
-                    onChange={handleChange}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="address">Address</Label>
-                  <Input
-                    id="address"
-                    name="address"
-                    type="text"
-                    required
-                    className="relative block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                    placeholder="Enter your address"
-                    value={formData.address}
-                    onChange={handleChange}
-                  />
-                </div>
-              </>
-            )}
+          {role === 'worker' && renderWorkerForm()}
 
           {role === 'professional' && (
             <>

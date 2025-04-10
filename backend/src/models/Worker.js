@@ -17,33 +17,7 @@ const workerSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
-  yearsOfExperience: {
-    type: Number,
-    required: true
-  },
-  skills: {
-    type: [String],
-    required: true
-  },
-  certifications: {
-    type: [String],
-    required: true
-  },
   phoneNumber: {
-    type: String,
-    required: true,
-    trim: true
-  },
-  hourlyRate: {
-    type: Number,
-    required: true
-  },
-  availability: {
-    type: String,
-    required: true,
-    trim: true
-  },
-  description: {
     type: String,
     required: true,
     trim: true
@@ -52,11 +26,15 @@ const workerSchema = new mongoose.Schema({
     type: String,
     required: true,
     trim: true
+  },
+  hourlyRate: {
+    type: Number,
+    required: true,
+    min: 0
   }
+}, {
+  timestamps: true
 });
-
-// Add timestamps
-workerSchema.set('timestamps', true);
 
 // Add pre-save hook to update updatedAt
 workerSchema.pre('save', function(next) {
