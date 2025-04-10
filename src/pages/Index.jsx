@@ -36,7 +36,7 @@ const Index = () => {
                   </p>
                   <div className="flex flex-col gap-2">
                     <div className="flex items-center gap-2">
-                      <span className="font-bold">Email:</span>
+                      <span className="font-bold text-black">Email:</span>
                       <a
                         href="mailto:info@labournet.com"
                         className="text-[#004A57] hover:underline"
@@ -45,7 +45,7 @@ const Index = () => {
                       </a>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="font-bold">Phone:</span>
+                      <span className="font-bold text-black">Phone:</span>
                       <a
                         href="tel:+1234567890"
                         className="text-[#004A57] hover:underline"
@@ -54,8 +54,8 @@ const Index = () => {
                       </a>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="font-bold">Address:</span>
-                      <span>Aastha Residency, 004 Near Aai Ekveera Devi Mandir, Titwala(E) </span>
+                      <span className="font-bold text-black">Address:</span>
+                      <span className="font-bold text-black">Aastha Residency, 004 Near Aai Ekveera Devi Mandir, Titwala(E) </span>
                     </div>
                   </div>
                 </div>
