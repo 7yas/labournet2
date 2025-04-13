@@ -199,12 +199,13 @@ const ProfessionalDashboard = () => {
 
   // Filter projects based on search, category, and status
   const filteredProjects = projects.filter(project => {
+    const isPostedByUser = project.postedBy === user._id; // Filter projects posted by the logged-in user
     const matchesSearch = project.title?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategory === "All Categories" || project.projectType === selectedCategory;
     const matchesStatus = activeFilter === "All Projects" || 
                          (activeFilter === "Active" && project.status === "active") || 
                          (activeFilter === "Completed" && project.status === "completed");
-    return matchesSearch && matchesCategory && matchesStatus;
+    return isPostedByUser && matchesSearch && matchesCategory && matchesStatus;
   });
 
   const handleSearch = (e) => {

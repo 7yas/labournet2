@@ -63,6 +63,14 @@ router.post('/login', async (req, res) => {
         _id: user._id,
         email: user.email,
         fullName: user.fullName,
+        businessName: user.businessName,
+        businessType: user.businessType,
+        yearsOfExperience: user.yearsOfExperience,
+        licenseNumber: user.licenseNumber,
+        insuranceInfo: user.insuranceInfo,
+        projectTypes: user.projectTypes,
+        address: user.address,
+        phoneNumber: user.phoneNumber,
         role: role
       }
     });

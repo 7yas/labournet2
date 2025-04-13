@@ -203,7 +203,7 @@ const ProfessionalMessages = () => {
                           </div>
                           <div className="flex items-center gap-2">
                             <MapPin className="h-4 w-4 text-gray-500" />
-                            <span>{application.contractor?.address || '-'}</span>
+                            <span>{application.contractorDetails?.address || '-'}</span>
                           </div>
                         </div>
               </div>
@@ -213,15 +213,15 @@ const ProfessionalMessages = () => {
                         <div className="space-y-2">
                           <div className="flex items-center gap-2">
                             <Clock className="h-4 w-4 text-gray-500" />
-                            <span>{application.contractor?.yearsOfExperience || '0'} years of experience</span>
+                            <span>{application.contractorDetails?.yearsOfExperience || '0'} years of experience</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <Award className="h-4 w-4 text-gray-500" />
-                            <span>License: {application.contractor?.licenseNumber || '-'}</span>
+                            <span>License: {application.contractorDetails?.licenseNumber || '-'}</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <Briefcase className="h-4 w-4 text-gray-500" />
-                            <span>Business Type: {application.contractor?.businessType || '-'}</span>
+                            <span>Business Type: {application.contractorDetails?.businessType || '-'}</span>
                 </div>
               </div>
             </div>

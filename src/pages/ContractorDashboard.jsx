@@ -193,22 +193,47 @@ const ContractorDashboard = () => {
       }
     } finally {
       setLoading(false);
-    }
+    }1
   };
-
+  // const fetchWorkerDetails = async (role,worker_id) => {
+    
+  //   const token = localStorage.getItem('token');
+  //   const response2 = await fetch('http://localhost:5000/api/${role}/${worker_id}', {
+  //     method: 'GET',
+  //     headers: {
+  //       'Content-Type': 'application/json',
+  //       'Authorization': `Bearer ${token}`
+  //     },
+  //   });
+    
+  //   console.log('Response from user data fetch:', response2.data); // Debug log
+  //   return  response2.data;
+  // }
   const fetchApplications = async () => {
     try {
+      
       const response = await axios.get(
-        `http://localhost:5000/api/worker-applications/contractor/${user._id}`,
+        `http://localhost:5000/api/worker-applications/contractor/${user._id}`, // Ensure contractor ID is passed correctly
         {
           headers: {
             Authorization: `Bearer ${token}`
           }
         }
       );
-      setApplications(response.data);
+
+      if (response.data && response.data.length > 0) {
+        // const worker_role='worker';
+        // const ap_data= response.data;
+        // const workdet=fetchWorkerDetails(worker_role,ap_data.worker._id)
+        
+        setApplications(response.data); // Set applications if data is returned
+      } else {
+        setApplications([]); // Handle case where no applications are found
+      }
+
       setShowApplications(true);
     } catch (err) {
+      console.error('Error fetching applications:', err);
       setError('Failed to fetch applications');
     }
   };
@@ -335,36 +360,41 @@ const ContractorDashboard = () => {
             ) : (
               <div className="space-y-4">
                 {applications.map((application) => (
-                  <div key={application._id} className="border rounded-lg p-4">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="font-semibold">{application.fullName}</h3>
-                        <p className="text-gray-600">{application.email}</p>
-                        <p className="text-gray-600">Project: {application.projectTitle}</p>
-                        <p className="text-gray-600">Skills: {application.skills.join(', ')}</p>
-                        <p className="text-gray-600">Hourly Rate: ${application.hourlyRate}</p>
+                  <div key={application._id} className="border rounded-lg p-6 bg-gray-50 shadow-sm">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-lg text-gray-800">{application.worker?.fullName}</h3>
+                        <p className="text-sm text-gray-600">Email: {application.worker?.email}</p>
+                        <p className="text-sm text-gray-600">Phone: {application.worker?.phoneNumber}</p>
+                        <p className="text-sm text-gray-600">Project: {application.projectTitle}</p>
+                        <p className="text-sm text-gray-600">Location: {application.projectLocation}</p>
+                        <p className="text-sm text-gray-600">Hourly Rate: ₹{application.hourlyRate}</p>
+                        <p className="text-sm text-gray-600">Skills: {application.skills?.join(', ')}</p>
+                        <p className="text-sm text-gray-600">Experience: {application.experience}</p>
+                        <p className="text-sm text-gray-600">Availability: {application.availability}</p>
                       </div>
-                      <div className="flex space-x-2">
-                        {application.status === 'pending' && (
+                      <div className="flex flex-col md:flex-row items-center gap-4 mt-4 md:mt-0">
+                        {application.status === 'pending' ? (
                           <>
                             <button
                               onClick={() => handleApplicationStatus(application._id, 'accepted')}
-                              className="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600"
+                              className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition"
                             >
                               Accept
                             </button>
                             <button
                               onClick={() => handleApplicationStatus(application._id, 'rejected')}
-                              className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
+                              className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition"
                             >
                               Reject
                             </button>
                           </>
-                        )}
-                        {application.status !== 'pending' && (
-                          <span className={`px-3 py-1 rounded ${
-                            application.status === 'accepted' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                          }`}>
+                        ) : (
+                          <span
+                            className={`px-4 py-2 rounded text-white ${
+                              application.status === 'accepted' ? 'bg-green-500' : 'bg-red-500'
+                            }`}
+                          >
                             {application.status.charAt(0).toUpperCase() + application.status.slice(1)}
                           </span>
                         )}

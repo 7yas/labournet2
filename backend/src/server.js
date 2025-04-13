@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const connectDB = require('./config/db');
+const workerApplicationRoutes = require('./routes/workerApplications');
 require('dotenv').config();
 
 const app = express();
@@ -20,6 +21,8 @@ app.use('/api/applications', require('./routes/applications'));
 app.use('/api/profiles', require('./routes/profiles'));
 const contractorJobPostsRouter = require('./routes/contractorJobPosts');
 app.use('/api/contractor-job-posts', contractorJobPostsRouter);
+app.use('/api/worker-applications', require('./routes/workerApplications'));
+
 
 const PORT = process.env.PORT || 5000;
 

@@ -206,51 +206,43 @@ const WorkerApplications = () => {
             <div key={application._id} className="bg-white rounded-lg shadow-sm p-6">
               <div className="flex justify-between items-start mb-4">
                 <div>
-                  <h3 className="text-lg font-semibold">{application.worker?.fullName}</h3>
-                  <p className="text-gray-500 text-sm">{application.project?.title}</p>
+                  <h3 className="text-lg font-semibold text-gray-800">{application.worker?.fullName}</h3>
+                  <p className="text-sm text-gray-600">Email: {application.worker?.email}</p>
+                  <p className="text-sm text-gray-600">Phone: {application.worker?.phoneNumber}</p>
+                  <p className="text-sm text-gray-600">Project: {application.project?.title}</p>
+                  <p className="text-sm text-gray-600">Location: {application.project?.location}</p>
+                  <p className="text-sm text-gray-600">Hourly Rate: ₹{application.hourlyRate}</p>
+                  <p className="text-sm text-gray-600">Skills: {application.skills?.join(', ')}</p>
+                  <p className="text-sm text-gray-600">Experience: {application.experience}</p>
+                  <p className="text-sm text-gray-600">Availability: {application.availability}</p>
                 </div>
-                <span className={`px-2 py-1 rounded-full text-xs ${
-                  application.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                  application.status === 'accepted' ? 'bg-green-100 text-green-700' :
-                  'bg-red-100 text-red-700'
-                }`}>
-                  {application.status}
+                <span
+                  className={`px-3 py-1 rounded-full text-xs ${
+                    application.status === 'pending'
+                      ? 'bg-yellow-100 text-yellow-700'
+                      : application.status === 'accepted'
+                      ? 'bg-green-100 text-green-700'
+                      : 'bg-red-100 text-red-700'
+                  }`}
+                >
+                  {application.status.charAt(0).toUpperCase() + application.status.slice(1)}
                 </span>
               </div>
-              
-              <div className="space-y-2 mb-4">
-                <p className="text-sm text-gray-600">
-                  <span className="font-medium">Skills:</span> {application.skills?.join(', ')}
-                </p>
-                <p className="text-sm text-gray-600">
-                  <span className="font-medium">Experience:</span> {application.experience}
-                </p>
-                <p className="text-sm text-gray-600">
-                  <span className="font-medium">Availability:</span> {application.availability}
-                </p>
-              </div>
-
               <div className="flex justify-end space-x-2">
-                <Button
-                  variant="outline"
-                  onClick={() => handleViewDetails(application)}
-                >
-                  View Details
-                </Button>
                 {application.status === 'pending' && (
                   <>
-                    <Button
-                      variant="default"
+                    <button
                       onClick={() => handleAccept(application._id)}
+                      className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition"
                     >
                       Accept
-                    </Button>
-                    <Button
-                      variant="destructive"
+                    </button>
+                    <button
                       onClick={() => handleReject(application._id)}
+                      className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition"
                     >
                       Reject
-                    </Button>
+                    </button>
                   </>
                 )}
               </div>
@@ -318,4 +310,4 @@ const WorkerApplications = () => {
   );
 };
 
-export default WorkerApplications; 
+export default WorkerApplications;

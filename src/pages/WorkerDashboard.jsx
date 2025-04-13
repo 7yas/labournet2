@@ -185,7 +185,7 @@ const WorkerDashboard = () => {
         if (!userData) {
           throw new Error('No user data found. Please log in again.');
         }
-
+        
         // Create application data
         const applicationData = {
           worker: userData._id,
@@ -193,14 +193,23 @@ const WorkerDashboard = () => {
           contractor: selectedJob.postedBy._id,
           status: 'pending',
           coverLetter: 'I am interested in this position and would like to apply.',
-          expectedRate: selectedJob.hourlyRate?.min || userData.hourlyRate
+          expectedRate: selectedJob.hourlyRate || userData.hourlyRate,
+          projectTitle: selectedJob.title || "",
+          projectType: selectedJob.projectType || "",
+          projectLocation: selectedJob.location || "",
+          projectTimeline: selectedJob.timeline || "",
+          skills: userData.skills || [],
+          experience: userData.experience || '',
+          availability: userData.availability || 'Full-time',
+          hourlyRate: selectedJob.hourlyRate || userData.hourlyRate,
+          appliedAt: new Date()
         };
 
         console.log('Submitting application with data:', applicationData);
 
         // Submit application
         const response = await axios.post(
-          'http://localhost:5000/api/applications',
+          'http://localhost:5000/api/worker-applications/',
           applicationData,
           {
             headers: {
