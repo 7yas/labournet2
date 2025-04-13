@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const Contractor = require('../models/Contractor');
 const Worker = require('../models/Worker');
 const Builder = require('../models/Builder');
+const { sendWelcomeEmail } = require('../services/emailService');
 
 // Login route
 router.post('/login', async (req, res) => {
@@ -104,9 +105,27 @@ router.post('/signup', async (req, res) => {
 
     // Create profile based on role
     let newProfile;
-    if (role === 'contractor') {
+    if (role === 'worker') {
+      // Validate worker specific fields
+      const workerFields = ['phoneNumber', 'address', 'hourlyRate'];
+      const missingWorkerFields = workerFields.filter(field => !profileData[field]);
+      
+      if (missingWorkerFields.length > 0) {
+        return res.status(400).json({ 
+          message: 'Missing required worker fields',
+          missingFields: missingWorkerFields
+        });
+      }
+
+      newProfile = new Worker({
+        email,
+        password,
+        fullName,
+        ...profileData
+      });
+    } else if (role === 'contractor') {
       // Validate contractor specific fields
-      const contractorFields = ['businessName', 'businessLicense', 'businessType', 'yearsOfExperience', 'licenseNumber', 'insuranceInfo', 'projectTypes', 'phoneNumber'];
+      const contractorFields = ['businessName', 'businessLicense', 'businessType', 'yearsOfExperience', 'licenseNumber', 'insuranceInfo', 'projectTypes', 'phoneNumber', 'address', 'teamSize'];
       const missingContractorFields = contractorFields.filter(field => !profileData[field]);
       
       if (missingContractorFields.length > 0) {
@@ -121,26 +140,6 @@ router.post('/signup', async (req, res) => {
         password,
         fullName,
         ...profileData
-      });
-    } else if (role === 'worker') {
-      // Validate worker specific fields
-      const workerFields = ['phoneNumber', 'hourlyRate', 'address'];
-      const missingWorkerFields = workerFields.filter(field => !profileData[field]);
-      
-      if (missingWorkerFields.length > 0) {
-        return res.status(400).json({ 
-          message: 'Missing required worker fields',
-          missingFields: missingWorkerFields
-        });
-      }
-
-      newProfile = new Worker({
-        email,
-        password,
-        fullName,
-        hourlyRate: profileData.hourlyRate,
-        phoneNumber: profileData.phoneNumber,
-        address: profileData.address
       });
     } else if (role === 'builder') {
       // Validate builder specific fields
@@ -166,6 +165,14 @@ router.post('/signup', async (req, res) => {
 
     const savedProfile = await newProfile.save();
     console.log('Profile saved successfully:', savedProfile);
+    
+    // Send welcome email
+    try {
+      await sendWelcomeEmail(email, fullName, role);
+    } catch (emailError) {
+      console.error('Error sending welcome email:', emailError);
+      // Don't fail the signup if email fails
+    }
     
     // Return success response with user data
     res.status(201).json({
