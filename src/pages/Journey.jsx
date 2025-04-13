@@ -64,7 +64,11 @@ const Journey = () => {
   };
 
   const handleLogin = () => {
-    navigate('/login');
+    if (selectedRole) {
+      window.location.href = `http://localhost:8080/login?role=${selectedRole}`;
+    } else {
+      alert("Please select a role first");
+    }
   };
 
   return (
@@ -116,6 +120,7 @@ const Journey = () => {
                 variant="outline" 
                 size="lg"
                 onClick={handleLogin}
+                className="transition-colors duration-200 bg-[rgb(0,53,63)] text-white hover:bg-[rgb(0,100,120)] hover:text-white"
               >
                 Login
               </Button>

@@ -35,7 +35,7 @@ const ContactForm = () => {
   };
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="text-black p-6 max-w-4xl mx-auto">
       <h2 className="text-2xl font-bold mb-2">Get in Touch</h2>
       <p className="text-gray-500 mb-6">Have questions about our service? Let us know and we'll help!</p>
 

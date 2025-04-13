@@ -4,11 +4,11 @@ const RoleCard = ({ title, description, features }) => {
   return (
     <div className="bg-white rounded-lg shadow-md p-6 h-full flex flex-col">
       <div className="mb-4 flex items-center justify-center">
-        <div className={`w-48 h-16 flex items-center justify-center rounded-lg bg-[#004A57] text-white text-lg font-bold px-4 text-center`}>
-          {title}
+        <div className={`text-white w-16 h-16 flex items-center justify-center rounded-full bg-[#004A57] text-2xl font-bold`}>
+          {title.charAt(0)}
         </div>
       </div>
-      <h3 className="text-xl font-semibold mb-2 text-center">{title}</h3>
+      <h3 className="text-black text-xl font-semibold mb-2 text-center">{title}</h3>
       <p className="text-gray-600 mb-6 text-center">{description}</p>
       <div className="mt-auto">
         <h4 className="font-medium mb-3 text-[#004A57]">Key Benefits:</h4>
