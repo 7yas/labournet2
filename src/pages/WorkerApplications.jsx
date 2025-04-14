@@ -209,11 +209,9 @@ const WorkerApplications = () => {
                   <h3 className="text-lg font-semibold text-gray-800">{application.worker?.fullName}</h3>
                   <p className="text-sm text-gray-600">Email: {application.worker?.email}</p>
                   <p className="text-sm text-gray-600">Phone: {application.worker?.phoneNumber}</p>
-                  <p className="text-sm text-gray-600">Project: {application.project?.title}</p>
-                  <p className="text-sm text-gray-600">Location: {application.project?.location}</p>
+                  <p className="text-sm text-gray-600">Project: {application.projectTitle}</p>
+                  <p className="text-sm text-gray-600">Location: {application.projectLocation}</p>
                   <p className="text-sm text-gray-600">Hourly Rate: ₹{application.hourlyRate}</p>
-                  <p className="text-sm text-gray-600">Skills: {application.skills?.join(', ')}</p>
-                  <p className="text-sm text-gray-600">Experience: {application.experience}</p>
                   <p className="text-sm text-gray-600">Availability: {application.availability}</p>
                 </div>
                 <span
