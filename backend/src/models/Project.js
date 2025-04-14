@@ -61,8 +61,7 @@ const projectSchema = new mongoose.Schema({
   },
   postedBy: {
     type: mongoose.Schema.Types.ObjectId,
-    required: true,
-    ref: 'Contractor'
+    required: true
   },
   postedByRole: {
     type: String,

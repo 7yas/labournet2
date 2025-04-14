@@ -47,6 +47,8 @@ export const createApplication = (applicationData) => api.post('/applications', 
 export const getProjectApplications = (projectId) => api.get(`/applications/project/${projectId}`);
 export const updateApplicationStatus = (applicationId, status) => api.patch(`/applications/${applicationId}/status`, { status });
 
+export const getworkerApplications = (workerId) => api.get(`/applications/worker/${workerId}`);
+
 // Add getProfile method
 api.getProfile = async () => {
   try {

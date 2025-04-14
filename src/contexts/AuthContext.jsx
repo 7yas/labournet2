@@ -19,6 +19,16 @@ export const AuthProvider = ({ children }) => {
       try {
         const parsedUser = JSON.parse(userData);
         setUser(parsedUser);
+        if (parsedUser.role === 'contractor') {
+        localStorage.setItem('user_cont', JSON.stringify(parsedUser));
+        }
+        if (parsedUser.role === 'worker') {
+          localStorage.setItem('user_work', JSON.stringify(parsedUser));
+        }
+        if (parsedUser.role === 'builder') {
+          localStorage.setItem('user_build', JSON.stringify(parsedUser));
+        }
+
         setToken(storedToken);
       } catch (error) {
         console.error('Error parsing user data or setting token:', error);
@@ -47,6 +57,15 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('authToken', newToken);
 
       setUser(userData);
+      if (userData.role === 'contractor') {
+        localStorage.setItem('user_cont', JSON.stringify(userData));
+        }
+        if (userData.role === 'worker') {
+          localStorage.setItem('user_work', JSON.stringify(userData));
+        }
+        if (userData.role === 'builder') {
+          localStorage.setItem('user_build', JSON.stringify(userData));
+        }
       setToken(newToken);
       return userData;
     } catch (error) {
