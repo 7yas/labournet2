@@ -37,7 +37,7 @@ const WorkerDashboard = () => {
     const fetchProjects = async () => {
       try {
         setLoading(true);
-        const token = localStorage.getItem('authToken');
+        const token = localStorage.getItem('token');
         if (!token) {
           throw new Error('No authentication token found');
         }
@@ -156,7 +156,7 @@ const WorkerDashboard = () => {
       const contractorData = await response.json();
       setContractorDetails(contractorData);
       setSelectedJob(project);
-      setShowAcceptDialog(true);
+    setShowAcceptDialog(true);
     } catch (error) {
       console.error('Error preparing job application:', error);
       toast({
@@ -220,26 +220,26 @@ const WorkerDashboard = () => {
         );
 
         if (response.status === 201) {
-          // Add job to active jobs with contractor details
-          const updatedActiveJobs = [...activeJobs, {
-            ...selectedJob,
-            accepted: true,
-            contractor: contractorDetails
-          }];
-          setActiveJobs(updatedActiveJobs);
-          
-          // Save to localStorage
-          localStorage.setItem('activeJobs', JSON.stringify(updatedActiveJobs));
-          
-          // Remove the job from available jobs
-          setProjects(projects.filter(p => p._id !== selectedJob._id));
-          
-          setShowAcceptDialog(false);
-          
-          toast({
+        // Add job to active jobs with contractor details
+        const updatedActiveJobs = [...activeJobs, {
+          ...selectedJob,
+          accepted: true,
+          contractor: contractorDetails
+        }];
+      setActiveJobs(updatedActiveJobs);
+      
+      // Save to localStorage
+      localStorage.setItem('activeJobs', JSON.stringify(updatedActiveJobs));
+      
+      // Remove the job from available jobs
+        setProjects(projects.filter(p => p._id !== selectedJob._id));
+      
+      setShowAcceptDialog(false);
+      
+      toast({
             title: "Application Submitted",
-            description: "Your application has been submitted successfully.",
-          });
+          description: "Your application has been submitted successfully.",
+        });
         } else {
           throw new Error('Failed to submit application');
         }
@@ -263,11 +263,11 @@ const WorkerDashboard = () => {
             variant: "destructive",
           });
         } else {
-          toast({
-            title: "Error",
+        toast({
+          title: "Error",
             description: error.response?.data?.message || error.message || "Failed to submit application. Please try again.",
-            variant: "destructive",
-          });
+          variant: "destructive",
+        });
         }
       }
     }
@@ -295,24 +295,33 @@ const WorkerDashboard = () => {
 
   const handleApply = async (projectId) => {
     try {
-      const token = localStorage.getItem('authToken');
+      const token = localStorage.getItem('token');
       if (!token) {
-        throw new Error('No authentication token found');
+        setError('Please login to apply for jobs');
+        return;
       }
 
       const workerData = JSON.parse(localStorage.getItem('userData'));
-      if (!workerData) {
-        throw new Error('Worker data not found');
-      }
+      const project = projects.find(p => p._id === projectId);
 
       const applicationData = {
-        project: projectId,
-        worker: workerData._id,
+        workerId: workerData._id,
+        fullName: workerData.fullName,
+        email: workerData.email,
+        phoneNumber: workerData.phoneNumber,
+        address: workerData.address,
+        hourlyRate: workerData.hourlyRate,
+        skills: workerData.skills,
+        certifications: workerData.certifications,
+        projectId: project._id,
+        projectTitle: project.title,
+        projectType: project.type,
+        projectLocation: project.location,
+        projectTimeline: project.timeline,
+        contractorId: project.postedBy._id,
         status: 'pending',
-        applicationDate: new Date(),
-        skills: workerData.skills || [],
-        experience: workerData.experience || '',
-        availability: workerData.availability || 'Full-time'
+        coverLetter: 'I am interested in this position and would like to apply.',
+        appliedAt: new Date()
       };
 
       const response = await axios.post(
@@ -327,28 +336,14 @@ const WorkerDashboard = () => {
       );
 
       if (response.status === 201) {
-        toast({
-          title: "Success",
-          description: "Application submitted successfully!",
-          variant: "default",
-        });
-        
-        // Update the project list to reflect the application
-        setProjects(prevProjects => 
-          prevProjects.map(project => 
-            project._id === projectId 
-              ? { ...project, hasApplied: true }
-              : project
-          )
-        );
+        setSuccess('Application submitted successfully!');
+        // Update the projects list to show this project as applied
+        setProjects(projects.map(p => 
+          p._id === projectId ? { ...p, hasApplied: true } : p
+        ));
       }
     } catch (error) {
-      console.error('Error applying for job:', error);
-      toast({
-        title: "Error",
-        description: error.response?.data?.message || "Failed to submit application. Please try again.",
-        variant: "destructive",
-      });
+      setError(error.response?.data?.message || 'Failed to submit application');
     }
   };
 
@@ -396,27 +391,27 @@ const WorkerDashboard = () => {
           <DialogHeader>
             <DialogTitle>Worker Profile</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="flex items-center gap-4">
-              <div className="w-20 h-20 rounded-full bg-gray-300"></div>
-              <div>
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                <div className="w-20 h-20 rounded-full bg-gray-300"></div>
+                <div>
                 <h3 className="text-xl font-semibold">{workerDetails?.fullName || 'Worker'}</h3>
                 <p className="text-gray-500">{workerDetails?.email || 'No email provided'}</p>
+                </div>
               </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <h4 className="text-sm font-medium text-gray-500">Phone Number</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <h4 className="text-sm font-medium text-gray-500">Phone Number</h4>
                 <p>{workerDetails?.phoneNumber || 'No phone number provided'}</p>
-              </div>
-              <div>
-                <h4 className="text-sm font-medium text-gray-500">Address</h4>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium text-gray-500">Address</h4>
                 <p>{workerDetails?.address || 'No address provided'}</p>
-              </div>
-              <div>
-                <h4 className="text-sm font-medium text-gray-500">Hourly Rate</h4>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium text-gray-500">Hourly Rate</h4>
                 <p>₹{workerDetails?.hourlyRate || '0'}/hr</p>
-              </div>
+                </div>
               <div>
                 <h4 className="text-sm font-medium text-gray-500">Skills</h4>
                 <p>{workerDetails?.skills?.join(', ') || 'No skills listed'}</p>

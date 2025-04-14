@@ -27,7 +27,7 @@ const ContractorJobPosting = () => {
   
   useEffect(() => {
     if (user?._id && token) {
-      fetchJobPosts();
+    fetchJobPosts();
       fetchApplicationsCount();
     } else {
       setError('Please log in to view your job posts');
@@ -253,7 +253,7 @@ const ContractorJobPosting = () => {
             <p className="text-gray-500 text-sm mt-1">Across all jobs</p>
           </motion.div>
           
-          <motion.div
+          <motion.div 
             className="bg-white p-6 rounded-lg shadow-sm"
             whileHover={{ scale: 1.02 }}
             transition={{ duration: 0.2 }}

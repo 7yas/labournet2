@@ -246,7 +246,9 @@ const ProfessionalDashboard = () => {
                   Fill out the form below to create a new project.
                 </DialogDescription>
                 <div className="max-h-[calc(90vh-120px)] overflow-y-auto pr-2">
-                  <PostProjectForm />
+                  <PostProjectForm onProjectPosted={(newProject) => {
+                    setProjects(prevProjects => [newProject, ...prevProjects]);
+                  }} />
                 </div>
               </DialogContent>
             </Dialog>

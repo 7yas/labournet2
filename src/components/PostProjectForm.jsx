@@ -9,7 +9,6 @@ import { useNavigate } from "react-router-dom";
 import { useLanguage } from "../contexts/LanguageContext";
 import { api } from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
-import { createProject } from "../lib/api";
 
 // Create a context to share project data across components
 export const ProjectContext = React.createContext({
@@ -38,20 +37,27 @@ export const ProjectProvider = ({ children }) => {
   );
 };
 
-const PostProjectForm = ({ onClose }) => {
+const PostProjectForm = ({ onProjectPosted }) => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { t } = useLanguage();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { user } = useAuth();
 
+  // Fix duplicate `hourlyRate` and remove unnecessary fields
   const [formData, setFormData] = useState({
     title: "",
     location: "",
-    projectType: "Commercial",
+    employmentType: "",
     hourlyRate: "",
     jobDescription: "",
-    timeline: "3 months"
+    requirements: "",
+    company: "Bharati Construction Ltd",
+    projectType: "Commercial",
+    timeline: "3 months",
+    expiresAfter: "30",
+    postedDate: new Date().toISOString(),
+    status: "active",
   });
 
   const handleChange = (e) => {
@@ -66,50 +72,102 @@ const PostProjectForm = ({ onClose }) => {
     e.preventDefault();
     setIsSubmitting(true);
 
+    // Check if user is authenticated using the useAuth hook
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please login to post a project.",
+        variant: "destructive",
+      });
+      setIsSubmitting(false);
+      return;
+    }
+
+    // Validate form
+    const requiredFields = ["title", "location", "projectType", "hourlyRate", "employmentType"];
+    const missingFields = requiredFields.filter((field) => !formData[field]);
+
+    if (missingFields.length > 0) {
+      toast({
+        title: "Missing Information",
+        description: `Please fill in the following fields: ${missingFields.join(", ")}`,
+        variant: "destructive",
+      });
+      setIsSubmitting(false);
+      return;
+    }
+
     try {
+      // Format the project data according to the Project model
       const projectData = {
         title: formData.title,
-        jobDescription: formData.jobDescription,
         location: formData.location,
-        projectType: formData.projectType,
-        status: 'active',
-        postedBy: user._id,
-        postedByRole: 'Builder',
-        employmentType: 'Contract',
+        employmentType: formData.employmentType,
         hourlyRate: formData.hourlyRate,
+        jobDescription: formData.jobDescription,
+        requirements: formData.requirements || '',
+        company: formData.company,
+        projectType: formData.projectType,
         timeline: formData.timeline,
-        expiresAfter: "30",
-        company: user.businessName || "Your Company",
-        postedDate: new Date().toISOString()
+        expiresAfter: formData.expiresAfter,
+        postedDate: new Date().toISOString(),
+        status: 'active',
+        postedBy: user._id, // Use user._id from useAuth hook
+        postedByRole: 'Builder' // Set the role to Builder
       };
 
-      // Create the project using the api instance
-      await api.post('/projects', projectData);
-      
+      console.log('Sending project data:', projectData);
+
+      const response = await fetch('http://localhost:5000/api/projects', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}` // Add authorization header
+        },
+        body: JSON.stringify(projectData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to post project');
+      }
+
+      const savedProject = await response.json();
+      console.log('Project saved successfully:', savedProject);
+
+      // Clear form fields
+      setFormData({
+        title: "",
+        location: "",
+        employmentType: "",
+        hourlyRate: "",
+        jobDescription: "",
+        requirements: "",
+        company: "Bharati Construction Ltd",
+        projectType: "Commercial",
+        timeline: "3 months",
+        expiresAfter: "30",
+        postedDate: new Date().toISOString(),
+        status: "active",
+      });
+
       toast({
         title: "Success",
-        description: "Project posted successfully",
+        description: "Project posted successfully!",
       });
-      
-      // Reset form
-      setFormData({
-        title: '',
-        location: '',
-        projectType: 'Commercial',
-        hourlyRate: '',
-        jobDescription: '',
-        timeline: '3 months'
-      });
-      
-      // Close dialog using the onClose prop
-      if (onClose) {
-        onClose();
+
+      // Call the callback with the new project
+      if (onProjectPosted) {
+        onProjectPosted(savedProject);
       }
+
+      // Close the dialog
+      navigate('/professional-dashboard');
     } catch (error) {
-      console.error('Error creating project:', error);
+      console.error('Error posting project:', error);
       toast({
         title: "Error",
-        description: error.response?.data?.message || "Failed to post project",
+        description: error.message || "Failed to post project",
         variant: "destructive",
       });
     } finally {
@@ -269,7 +327,7 @@ const PostProjectForm = ({ onClose }) => {
             disabled={isSubmitting}
           >
             {isSubmitting ? "Posting..." : "Post Job"}
-            </Button>
+          </Button>
         </div>
       </form>
     </motion.div>

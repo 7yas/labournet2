@@ -193,13 +193,27 @@ const ContractorDashboard = () => {
       }
     } finally {
       setLoading(false);
-    }
+    }1
   };
-
+  // const fetchWorkerDetails = async (role,worker_id) => {
+    
+  //   const token = localStorage.getItem('token');
+  //   const response2 = await fetch('http://localhost:5000/api/${role}/${worker_id}', {
+  //     method: 'GET',
+  //     headers: {
+  //       'Content-Type': 'application/json',
+  //       'Authorization': `Bearer ${token}`
+  //     },
+  //   });
+    
+  //   console.log('Response from user data fetch:', response2.data); // Debug log
+  //   return  response2.data;
+  // }
   const fetchApplications = async () => {
     try {
+      
       const response = await axios.get(
-        `http://localhost:5000/api/worker-applications/contractor/${user._id}`,
+        `http://localhost:5000/api/worker-applications/contractor/${user._id}`, // Ensure contractor ID is passed correctly
         {
           headers: {
             Authorization: `Bearer ${token}`,
